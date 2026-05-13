@@ -1,0 +1,46 @@
+"""
+AEGRM (Arhiva Electronică de Garanții Reale Mobiliare) collector.
+"""
+from __future__ import annotations
+
+from typing import Optional
+from datetime import datetime, timezone
+
+from app.collectors.base_connector import BaseConnector
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+class AEGRMCollector(BaseConnector):
+    SOURCE_NAME = "AEGRM"
+    BASE_URL = "https://www.aegrm.ro"
+    RATE_LIMIT_PER_SECOND = 0.5
+
+    async def sync(self, **kwargs) -> dict:
+        return {"processed": 0, "failed": 0, "note": "AEGRM requires manual/scheduled sync"}
+
+    async def fetch_single(self, cui: int) -> Optional[dict]:
+        """Fetch mortgage/guarantee records for a company."""
+        try:
+            response = await self.request(
+                "GET",
+                f"/api/search?cui={cui}",
+            )
+            data = response.json()
+
+            guarantees = []
+            for item in data.get("results", []):
+                guarantees.append({
+                    "tip_garantie": item.get("tip"),
+                    "creditor": item.get("creditor"),
+                    "valoare": item.get("valoare"),
+                    "data_inscriere": item.get("data_inscriere"),
+                    "status": item.get("status"),
+                })
+
+            return {"cui": cui, "guarantees": guarantees} if guarantees else None
+
+        except Exception as e:
+            logger.error("aegrm_fetch_failed", cui=cui, error=str(e))
+            return None

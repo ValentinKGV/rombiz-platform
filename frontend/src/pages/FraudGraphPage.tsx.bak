@@ -1,0 +1,155 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { AlertTriangle, Orbit, Shield } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { SectionHeader, DisclaimerBanner } from "@/components/common";
+
+export default function FraudGraphPage() {
+    const [cuiSearch, setCuiSearch] = useState("");
+    const [selectedCui, setSelectedCui] = useState<string | null>(null);
+
+    const { data: profile, isLoading } = useQuery({
+        queryKey: ["fraud", selectedCui],
+        queryFn: async () => {
+            const { data } = await api.get(`/fraud/${selectedCui}/profile`);
+            return data;
+        },
+        enabled: !!selectedCui,
+    });
+
+    const { data: graph } = useQuery({
+        queryKey: ["fraud", selectedCui, "graph"],
+        queryFn: async () => {
+            const { data } = await api.get(`/fraud/${selectedCui}/graph`);
+            return data;
+        },
+        enabled: !!selectedCui,
+    });
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSelectedCui(cuiSearch);
+    };
+
+    return (
+        <div className="space-y-6">
+            <SectionHeader
+                title="Fraud Graph Engine"
+                subtitle="Detectare fraudă prin analiza grafurilor de relații"
+            />
+
+            <DisclaimerBanner
+                title="Aviz Important:"
+                text="Rezultatele prezentate sunt suspiciuni algoritmice bazate pe analiza datelor publice. Acestea nu constituie probe sau acuzații și trebuie verificate independent înainte de a lua orice decizie."
+            />
+
+            {/* Search */}
+            <form onSubmit={handleSearch} className="flex gap-2">
+                <input
+                    type="text"
+                    placeholder="Introdu CUI pentru analiză fraud..."
+                    value={cuiSearch}
+                    onChange={(e) => setCuiSearch(e.target.value)}
+                    className="input-scifi flex-1"
+                />
+                <button
+                    type="submit"
+                    className="btn-cosmic px-6 py-2.5 text-sm"
+                >
+                    Analizează
+                </button>
+            </form>
+
+            {isLoading && (
+                <div className="flex h-32 items-center justify-center">
+                    <div className="relative">
+                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-nebula-200 border-t-nebula-500" />
+                        <Orbit className="absolute inset-0 m-auto h-4 w-4 text-nebula-400 animate-pulse" />
+                    </div>
+                </div>
+            )}
+
+            {profile && (
+                <div className="space-y-6">
+                    {/* Summary */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                        <div className="card-cosmic text-center">
+                            <Shield className="mx-auto h-8 w-8 text-nebula-500" />
+                            <p className="mt-2 font-orbitron text-2xl font-bold text-slate-800">{profile.anomaly_score}</p>
+                            <p className="font-rajdhani text-sm text-slate-400">Scor Anomalie</p>
+                        </div>
+                        <div className="card-cosmic text-center">
+                            <p className="font-orbitron text-2xl font-bold text-slate-800">{profile.graph_summary?.nodes || 0}</p>
+                            <p className="font-rajdhani text-sm text-slate-400">Noduri Graf</p>
+                        </div>
+                        <div className="card-cosmic text-center">
+                            <p className="font-orbitron text-2xl font-bold text-slate-800">{profile.graph_summary?.edges || 0}</p>
+                            <p className="font-rajdhani text-sm text-slate-400">Relații</p>
+                        </div>
+                        <div className="card-cosmic text-center">
+                            <p className="font-orbitron text-2xl font-bold text-slate-800">{profile.alerts?.length || 0}</p>
+                            <p className="font-rajdhani text-sm text-slate-400">Alerte</p>
+                        </div>
+                    </div>
+
+                    {/* Graph visualization placeholder */}
+                    {graph && (
+                        <div className="card-cosmic">
+                            <h3 className="mb-4 font-orbitron text-sm font-semibold tracking-wide text-slate-700">Graf Relații</h3>
+                            <div className="flex h-96 items-center justify-center border rounded-lg bg-nebula-50/30">
+                                <div className="text-center text-slate-400">
+                                    <Shield className="mx-auto h-12 w-12 mb-2" />
+                                    <p>Vizualizare graf interactivă</p>
+                                    <p className="text-sm">
+                                        {graph.nodes?.length || 0} noduri · {graph.edges?.length || 0} relații
+                                    </p>
+                                    <p className="mt-2 text-xs">
+                                        (Componenta React Flow se va integra aici)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Alerts */}
+                    {profile.alerts?.length > 0 && (
+                        <div className="card-cosmic">
+                            <h3 className="mb-4 font-orbitron text-sm font-semibold tracking-wide text-slate-700">Alerte Fraud</h3>
+                            <div className="space-y-3">
+                                {profile.alerts.map((alert: { id: number; alert_type: string; descriere: string; severity: string }) => (
+                                    <div key={alert.id} className="flex items-start gap-3 rounded-lg border p-3">
+                                        <AlertTriangle
+                                            className={cn(
+                                                "mt-0.5 h-5 w-5 flex-shrink-0",
+                                                alert.severity === "CRITICAL" && "text-red-500",
+                                                alert.severity === "HIGH" && "text-orange-500",
+                                                alert.severity === "MEDIUM" && "text-yellow-500",
+                                                alert.severity === "LOW" && "text-green-500"
+                                            )}
+                                        />
+                                        <div>
+                                            <p className="font-exo font-semibold text-slate-700">{alert.alert_type}</p>
+                                            <p className="font-rajdhani text-sm text-slate-400">{alert.descriere}</p>
+                                        </div>
+                                        <span
+                                            className={cn(
+                                                "ml-auto rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0",
+                                                alert.severity === "CRITICAL" && "bg-red-100 text-red-700",
+                                                alert.severity === "HIGH" && "bg-orange-100 text-orange-700",
+                                                alert.severity === "MEDIUM" && "bg-yellow-100 text-yellow-700",
+                                                alert.severity === "LOW" && "bg-green-100 text-green-700"
+                                            )}
+                                        >
+                                            {alert.severity}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}

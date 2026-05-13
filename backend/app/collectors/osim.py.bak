@@ -1,0 +1,49 @@
+"""
+OSIM (State Office for Inventions and Trademarks) collector.
+"""
+from __future__ import annotations
+
+from typing import Optional
+from datetime import datetime, timezone
+
+from app.collectors.base_connector import BaseConnector
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+class OSIMCollector(BaseConnector):
+    SOURCE_NAME = "OSIM"
+    BASE_URL = "https://www.osim.ro"
+    RATE_LIMIT_PER_SECOND = 0.5
+
+    async def sync(self, **kwargs) -> dict:
+        return {"processed": 0, "failed": 0, "note": "OSIM sync not yet automated"}
+
+    async def fetch_single(self, identifier: str) -> Optional[dict]:
+        """Search trademarks/patents by company name or registration number."""
+        try:
+            response = await self.request(
+                "GET",
+                f"/api/trademarks/search?q={identifier}",
+            )
+            data = response.json()
+
+            marks = []
+            for item in data.get("results", []):
+                marks.append({
+                    "tip": item.get("tip", "marca"),
+                    "denumire": item.get("denumire"),
+                    "nr_inregistrare": item.get("numar"),
+                    "titular": item.get("titular"),
+                    "data_inregistrare": item.get("data_inregistrare"),
+                    "data_expirare": item.get("data_expirare"),
+                    "status": item.get("status"),
+                    "clase_nisa": item.get("clase"),
+                })
+
+            return {"query": identifier, "trademarks": marks}
+
+        except Exception as e:
+            logger.error("osim_fetch_failed", error=str(e))
+            return None

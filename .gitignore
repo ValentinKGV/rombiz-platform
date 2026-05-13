@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Docker
+docker/volumes/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Coverage
+htmlcov/
+.coverage
+coverage.xml
+
+# MinIO data
+minio-data/
+
+# Keys
+*.pem
+*.key
+!*.key.example

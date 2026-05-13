@@ -1,0 +1,589 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* ═══ INTERGALACTIC SCI-FI LIGHT THEME ═══ */
+        --background: 240 20% 98%;
+        --foreground: 250 30% 12%;
+        --card: 0 0% 100%;
+        --card-foreground: 250 30% 12%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 250 30% 12%;
+        --primary: 265 85% 55%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 240 15% 94%;
+        --secondary-foreground: 250 30% 12%;
+        --muted: 245 15% 94%;
+        --muted-foreground: 250 10% 45%;
+        --accent: 185 70% 92%;
+        --accent-foreground: 250 30% 12%;
+        --destructive: 10 90% 55%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 250 20% 88%;
+        --input: 250 20% 88%;
+        --ring: 265 85% 55%;
+        --radius: 0.75rem;
+
+        --nebula-start: 265 85% 55%;
+        --nebula-mid: 220 90% 56%;
+        --nebula-end: 185 80% 45%;
+        --dragon-fire: 15 95% 55%;
+        --dragon-blood: 350 85% 50%;
+        --stardust: 45 95% 60%;
+        --void: 250 30% 12%;
+        --plasma: 280 80% 65%;
+
+        /* Surfaces */
+        --surface-primary: 0 0% 100%;
+        --surface-secondary: 240 20% 98%;
+        --sidebar-bg: linear-gradient(180deg, hsl(250 25% 98%) 0%, hsl(245 20% 96%) 50%, hsl(240 18% 95%) 100%);
+        --sidebar-border: 250 20% 88%;
+        --topbar-bg: 0 0% 100% / 0.7;
+    }
+
+    .dark {
+        --background: 240 15% 8%;
+        --foreground: 220 15% 90%;
+        --card: 240 12% 12%;
+        --card-foreground: 220 15% 90%;
+        --popover: 240 12% 12%;
+        --popover-foreground: 220 15% 90%;
+        --primary: 265 85% 65%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 240 12% 16%;
+        --secondary-foreground: 220 15% 85%;
+        --muted: 240 12% 18%;
+        --muted-foreground: 220 10% 55%;
+        --accent: 185 50% 18%;
+        --accent-foreground: 185 70% 80%;
+        --destructive: 10 85% 55%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 240 12% 20%;
+        --input: 240 12% 20%;
+        --ring: 265 75% 60%;
+
+        --surface-primary: 240 12% 12%;
+        --surface-secondary: 240 10% 10%;
+        --sidebar-border: 240 12% 18%;
+        --topbar-bg: 240 12% 10% / 0.85;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'Exo 2', 'Rajdhani', system-ui, sans-serif;
+        font-feature-settings: "rlig" 1, "calt" 1;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: 'Orbitron', 'Exo 2', sans-serif;
+        letter-spacing: 0.02em;
+    }
+}
+
+/* ═══ COSMIC ANIMATIONS ═══ */
+@keyframes nebula-pulse {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes star-twinkle {
+
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes plasma-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes dragon-breathe {
+
+    0%,
+    100% {
+        box-shadow: 0 0 15px rgba(139, 92, 246, 0.15), 0 0 30px rgba(59, 130, 246, 0.08);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(139, 92, 246, 0.25), 0 0 50px rgba(59, 130, 246, 0.15);
+    }
+}
+
+@keyframes warp-drive {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes orbit-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes cosmic-border {
+    0% {
+        border-color: hsl(265 85% 55% / 0.4);
+    }
+
+    33% {
+        border-color: hsl(220 90% 56% / 0.4);
+    }
+
+    66% {
+        border-color: hsl(185 80% 45% / 0.4);
+    }
+
+    100% {
+        border-color: hsl(265 85% 55% / 0.4);
+    }
+}
+
+/* ═══ COSMIC UTILITY CLASSES ═══ */
+@layer components {
+
+    /* Nebula gradient background for hero sections */
+    .bg-nebula {
+        background: linear-gradient(135deg,
+                hsl(265 85% 55% / 0.08) 0%,
+                hsl(220 90% 56% / 0.06) 30%,
+                hsl(185 80% 45% / 0.04) 60%,
+                hsl(15 95% 55% / 0.03) 100%);
+    }
+
+    /* Deep space card with cosmic glow */
+    .card-cosmic {
+        @apply relative overflow-hidden rounded-xl border bg-card p-6;
+        border-color: hsl(var(--border));
+        background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-cosmic:hover {
+        border-color: hsl(265 85% 55% / 0.35);
+        box-shadow:
+            0 0 20px hsl(265 85% 55% / 0.08),
+            0 8px 32px hsl(var(--foreground) / 0.06);
+        transform: translateY(-2px);
+    }
+
+    .card-cosmic::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg,
+                hsl(265 85% 55%) 0%,
+                hsl(220 90% 56%) 50%,
+                hsl(185 80% 45%) 100%);
+        opacity: 0;
+        transition: opacity 0.4s;
+    }
+
+    .card-cosmic:hover::before {
+        opacity: 1;
+    }
+
+    /* Dragon fire border accent */
+    .border-dragon {
+        border-image: linear-gradient(135deg,
+                hsl(350 85% 50%) 0%,
+                hsl(15 95% 55%) 50%,
+                hsl(45 95% 60%) 100%) 1;
+    }
+
+    /* Nebula gradient text */
+    .text-nebula {
+        background: linear-gradient(135deg,
+                hsl(265 85% 55%) 0%,
+                hsl(220 90% 56%) 50%,
+                hsl(185 80% 45%) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Dragon gradient text */
+    .text-dragon {
+        background: linear-gradient(135deg,
+                hsl(350 85% 50%) 0%,
+                hsl(15 95% 55%) 50%,
+                hsl(45 95% 60%) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Glowing cosmic button */
+    .btn-cosmic {
+        @apply relative overflow-hidden rounded-lg px-6 py-3 font-semibold text-white;
+        font-family: 'Rajdhani', sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: linear-gradient(135deg,
+                hsl(265 85% 55%) 0%,
+                hsl(220 90% 56%) 100%);
+        box-shadow: 0 0 20px hsl(265 85% 55% / 0.2);
+        transition: all 0.3s;
+    }
+
+    .btn-cosmic:hover {
+        box-shadow: 0 0 30px hsl(265 85% 55% / 0.35), 0 0 60px hsl(220 90% 56% / 0.15);
+        transform: translateY(-1px);
+    }
+
+    .btn-cosmic::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transform: rotate(45deg);
+        animation: warp-drive 3s infinite;
+    }
+
+    /* Sci-fi input field */
+    .input-scifi {
+        @apply w-full rounded-lg border px-4 py-3 text-sm;
+        background: hsl(var(--card) / 0.8);
+        border-color: hsl(var(--border));
+        color: hsl(var(--foreground));
+        backdrop-filter: blur(8px);
+        transition: all 0.3s;
+        font-family: 'Exo 2', sans-serif;
+    }
+
+    .input-scifi:focus {
+        @apply outline-none;
+        border-color: hsl(265 85% 55%);
+        box-shadow: 0 0 0 3px hsl(265 85% 55% / 0.12), 0 0 20px hsl(265 85% 55% / 0.06);
+    }
+
+    /* Cosmic sidebar */
+    .sidebar-cosmic {
+        background: linear-gradient(180deg,
+                hsl(var(--card)) 0%,
+                hsl(var(--secondary)) 50%,
+                hsl(var(--muted)) 100%);
+        border-right: 1px solid hsl(var(--border));
+    }
+
+    /* Active nav item with cosmic glow */
+    .nav-active {
+        background: linear-gradient(135deg,
+                hsl(265 85% 55%) 0%,
+                hsl(220 90% 56%) 100%);
+        color: white;
+        box-shadow: 0 0 15px hsl(265 85% 55% / 0.25);
+    }
+
+    /* Star field background pattern */
+    .bg-stars {
+        position: relative;
+    }
+
+    .bg-stars::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+            radial-gradient(2px 2px at 20px 30px, hsl(265 85% 55% / 0.15), transparent),
+            radial-gradient(2px 2px at 40px 70px, hsl(220 90% 56% / 0.12), transparent),
+            radial-gradient(1px 1px at 90px 40px, hsl(185 80% 45% / 0.18), transparent),
+            radial-gradient(1px 1px at 130px 80px, hsl(45 95% 60% / 0.15), transparent),
+            radial-gradient(2px 2px at 160px 30px, hsl(350 85% 50% / 0.1), transparent),
+            radial-gradient(1px 1px at 200px 60px, hsl(265 85% 55% / 0.12), transparent),
+            radial-gradient(1px 1px at 60px 100px, hsl(220 90% 56% / 0.15), transparent),
+            radial-gradient(2px 2px at 240px 90px, hsl(185 80% 45% / 0.1), transparent);
+        background-size: 260px 120px;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Orbiting ring decoration */
+    .orbit-ring {
+        @apply absolute rounded-full border;
+        border-color: hsl(265 85% 55% / 0.1);
+        animation: orbit-spin 20s linear infinite;
+    }
+
+    /* Cosmic table styling */
+    .table-cosmic thead {
+        background: linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(var(--secondary)) 100%);
+    }
+
+    .table-cosmic thead th {
+        font-family: 'Rajdhani', sans-serif;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: hsl(var(--muted-foreground));
+    }
+
+    .table-cosmic tbody tr {
+        transition: all 0.2s;
+        border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .table-cosmic tbody tr:hover {
+        background: hsl(265 85% 55% / 0.05);
+    }
+
+    /* Badge with cosmic glow */
+    .badge-cosmic {
+        @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+        font-family: 'Rajdhani', sans-serif;
+        letter-spacing: 0.05em;
+    }
+
+    /* Cosmic section header with draconic accent */
+    .section-header {
+        @apply relative pb-3 mb-6;
+        font-family: 'Orbitron', sans-serif;
+    }
+
+    .section-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg,
+                hsl(265 85% 55%) 0%,
+                hsl(15 95% 55%) 50%,
+                hsl(45 95% 60%) 100%);
+        border-radius: 2px;
+    }
+}
+
+/* ═══ SCROLLBAR — Cosmic styled ═══ */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: hsl(var(--secondary));
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, hsl(265 85% 55% / 0.3), hsl(220 90% 56% / 0.3));
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, hsl(265 85% 55% / 0.5), hsl(220 90% 56% / 0.5));
+}
+
+/* ═══ DARK MODE TRANSITIONS ═══ */
+html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ═══ SKELETON LOADING ═══ */
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg,
+            hsl(var(--muted)) 25%,
+            hsl(var(--muted-foreground) / 0.08) 50%,
+            hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.8s ease-in-out infinite;
+    border-radius: 0.5rem;
+}
+
+/* ═══ RESPONSIVE HELPERS ═══ */
+@media (max-width: 640px) {
+    .card-cosmic {
+        padding: 1rem;
+    }
+
+    .recharts-wrapper {
+        font-size: 10px;
+    }
+}
+
+/* ═══ DARK MODE — RECHARTS & CARD BACKGROUNDS ═══════════════════
+   Global CSS overrides so all pages get dark charts / cards without
+   touching each file individually.
+═══════════════════════════════════════════════════════════════ */
+
+/* Recharts tooltip popup */
+.dark .recharts-default-tooltip {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+.dark .recharts-tooltip-label {
+    color: #e2e8f0 !important;
+}
+
+.dark .recharts-tooltip-item {
+    color: #94a3b8 !important;
+}
+
+/* Recharts axis tick labels */
+.dark .recharts-cartesian-axis-tick text,
+.dark .recharts-polar-angle-axis-tick text,
+.dark .recharts-polar-radius-axis-tick text {
+    fill: #94a3b8 !important;
+}
+
+/* Recharts grid lines */
+.dark .recharts-cartesian-grid line {
+    stroke: #334155 !important;
+}
+
+.dark .recharts-polar-grid-concentric polyline,
+.dark .recharts-polar-grid-concentric ellipse,
+.dark .recharts-polar-grid-angle line {
+    stroke: #334155 !important;
+}
+
+/* Recharts legend text */
+.dark .recharts-legend-item-text {
+    color: #94a3b8 !important;
+}
+
+/* Card containers — these pages use bg-white/70 and bg-white/80 */
+.dark .bg-white\/70 {
+    background-color: rgb(30 41 59 / 0.75) !important;
+}
+
+.dark .bg-white\/80 {
+    background-color: rgb(30 41 59 / 0.85) !important;
+}
+
+.dark .bg-white\/60 {
+    background-color: rgb(30 41 59 / 0.6) !important;
+}
+
+/* Card borders */
+.dark .border-indigo-100\/80 {
+    border-color: rgb(51 65 85 / 0.6) !important;
+}
+
+.dark .border-white\/60 {
+    border-color: rgb(51 65 85 / 0.5) !important;
+}
+
+.dark .border-slate-100 {
+    border-color: rgb(51 65 85 / 0.5) !important;
+}
+
+/* Sub-badge pills (bg-slate-100) */
+.dark .bg-slate-100 {
+    background-color: rgb(51 65 85 / 0.6) !important;
+}
+
+/* ═══ DARK MODE GLOBAL TEXT CONTRAST ═══
+   Applied in @layer base so explicit dark:text-* utilities (layer: utilities)
+   always take priority via CSS cascade layer ordering.
+   Fixes all pages without touching every file individually.
+════════════════════════════════════════ */
+@layer base {
+
+    .dark .text-slate-900,
+    .dark .text-slate-800 {
+        color: rgb(226 232 240);
+        /* slate-200 */
+    }
+
+    .dark .text-slate-700 {
+        color: rgb(203 213 225);
+        /* slate-300 */
+    }
+
+    .dark .text-slate-600 {
+        color: rgb(148 163 184);
+        /* slate-400 */
+    }
+
+    .dark .text-slate-500 {
+        color: rgb(148 163 184);
+        /* slate-400 — bump up for readability */
+    }
+
+    .dark .text-slate-400 {
+        color: rgb(203 213 225);
+        /* slate-300 — secondary text more visible */
+    }
+
+    /* Table backgrounds in dark mode */
+    .dark thead th {
+        background-color: rgb(30 41 59);
+        /* slate-800 */
+    }
+
+    .dark tbody tr:nth-child(even) {
+        background-color: rgb(15 23 42 / 0.3);
+        /* slate-950/30 */
+    }
+}
