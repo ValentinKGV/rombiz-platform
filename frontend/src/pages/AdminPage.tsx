@@ -105,7 +105,8 @@ export default function AdminPage() {
                         <StatCard title="Total Companii" value={formatNumber(dashboard?.total_companies || 0)} icon={<Building2 className="h-5 w-5" />} />
                         <StatCard title="Utilizatori" value={formatNumber(dashboard?.total_users || 0)} icon={<Users className="h-5 w-5" />} />
                         <StatCard title="Organizații" value={formatNumber(dashboard?.total_organizations || 0)} icon={<Database className="h-5 w-5" />} />
-                        <StatCard title="Alerte Active" value={formatNumber(dashboard?.active_alerts || 0)} icon={<Bell className="h-5 w-5" />} />
+                        <StatCard title="Alerte Azi" value={formatNumber(dashboard?.total_alerts_today || 0)} icon={<Bell className="h-5 w-5" />} />
+                        <StatCard title="Apeluri API Azi" value={formatNumber(dashboard?.api_calls_today || 0)} icon={<Activity className="h-5 w-5" />} />
                     </div>
 
                     {/* Data Sources */}
@@ -174,22 +175,47 @@ export default function AdminPage() {
 // ── 11.1: Users Tab ──
 function UsersTab() {
     const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [page, setPage] = useState(1);
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviteRole, setInviteRole] = useState("viewer");
+    const [inviteFirstName, setInviteFirstName] = useState("");
+    const [inviteLastName, setInviteLastName] = useState("");
     const queryClient = useQueryClient();
+    const PER_PAGE = 20;
 
-    const { data: usersData } = useQuery({
-        queryKey: ["admin", "users", search],
-        queryFn: async () => (await api.get("/admin/users", { params: { search: search || undefined } })).data,
+    // Debounce search to avoid a query on every keystroke
+    const handleSearch = (v: string) => {
+        setSearch(v);
+        setPage(1);
+        clearTimeout((handleSearch as any)._t);
+        (handleSearch as any)._t = setTimeout(() => setDebouncedSearch(v), 350);
+    };
+
+    const { data: usersData, isLoading: usersLoading } = useQuery({
+        queryKey: ["admin", "users", debouncedSearch, page],
+        queryFn: async () =>
+            (await api.get("/admin/users", {
+                params: { search: debouncedSearch || undefined, page, per_page: PER_PAGE },
+            })).data,
     });
+
+    const totalPages = usersData ? Math.ceil((usersData.total || 0) / PER_PAGE) : 1;
 
     const inviteMutation = useMutation({
         mutationFn: async () => {
-            const { data } = await api.post("/admin/users/invite", { email: inviteEmail, role: inviteRole });
+            const { data } = await api.post("/admin/users/invite", {
+                email: inviteEmail,
+                role: inviteRole,
+                first_name: inviteFirstName || undefined,
+                last_name: inviteLastName || undefined,
+            });
             return data;
         },
         onSuccess: () => {
             setInviteEmail("");
+            setInviteFirstName("");
+            setInviteLastName("");
             queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
             toast.success("Utilizator invitat cu succes");
         },
@@ -224,89 +250,140 @@ function UsersTab() {
                     <UserPlus className="h-4 w-4 text-nebula" />
                     Invită Utilizator
                 </h3>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <input
+                        type="text"
+                        placeholder="Prenume..."
+                        value={inviteFirstName}
+                        onChange={(e) => setInviteFirstName(e.target.value)}
+                        className="input-scifi"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Nume..."
+                        value={inviteLastName}
+                        onChange={(e) => setInviteLastName(e.target.value)}
+                        className="input-scifi"
+                    />
                     <input
                         type="email"
                         placeholder="Email..."
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
-                        className="input-scifi flex-1"
+                        className="input-scifi"
                     />
-                    <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-scifi w-32">
+                    <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-scifi">
                         <option value="viewer">Viewer</option>
                         <option value="analyst">Analyst</option>
                         <option value="admin">Admin</option>
                     </select>
-                    <button
-                        onClick={() => inviteMutation.mutate()}
-                        disabled={!inviteEmail || inviteMutation.isPending}
-                        className="btn-cosmic px-4 py-2 disabled:opacity-50"
-                    >
-                        Invită
-                    </button>
                 </div>
+                <button
+                    onClick={() => inviteMutation.mutate()}
+                    disabled={!inviteEmail || inviteMutation.isPending}
+                    className="btn-cosmic mt-3 px-4 py-2 disabled:opacity-50"
+                >
+                    {inviteMutation.isPending ? "Se trimite..." : "Invită"}
+                </button>
                 {inviteMutation.data && (
                     <p className="mt-2 text-xs text-emerald-600">
-                        Utilizator creat! Parolă temporară: <code className="font-mono">{inviteMutation.data.temp_password}</code>
+                        Utilizator creat! Parolă temporară:{" "}
+                        <code className="font-mono">{inviteMutation.data.temp_password}</code>
                     </p>
                 )}
             </div>
 
-            {/* Search */}
-            <input
-                type="text"
-                placeholder="Caută utilizatori..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="input-scifi w-full"
-            />
+            {/* Search + count */}
+            <div className="flex items-center gap-3">
+                <input
+                    type="text"
+                    placeholder="Caută utilizatori după email sau nume..."
+                    value={search}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="input-scifi flex-1"
+                />
+                {usersData && (
+                    <span className="shrink-0 font-rajdhani text-xs text-slate-400">
+                        {usersData.total} utilizatori
+                    </span>
+                )}
+            </div>
 
-            {/* Users list */}
+            {/* Users table */}
             <div className="card-cosmic p-0 overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="border-b bg-nebula-50/30">
-                            <th className="px-4 py-3 text-left font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Email</th>
-                            <th className="px-4 py-3 text-left font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Nume</th>
-                            <th className="px-4 py-3 text-left font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Rol</th>
-                            <th className="px-4 py-3 text-center font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Activ</th>
-                            <th className="px-4 py-3 text-right font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Credite</th>
-                            <th className="px-4 py-3 text-right font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Acțiuni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {(usersData?.users || []).map((u: any) => (
-                            <tr key={u.id} className="border-b hover:bg-slate-50/50">
-                                <td className="px-4 py-3 font-medium">{u.email}</td>
-                                <td className="px-4 py-3 text-slate-500">{u.full_name || "—"}</td>
-                                <td className="px-4 py-3">
-                                    <select
-                                        value={u.role}
-                                        onChange={(e) => roleMutation.mutate({ userId: u.id, role: e.target.value })}
-                                        className="rounded border px-2 py-0.5 text-xs"
-                                    >
-                                        <option value="viewer">viewer</option>
-                                        <option value="analyst">analyst</option>
-                                        <option value="admin">admin</option>
-                                    </select>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                    <button onClick={() => toggleMutation.mutate(u.id)}>
-                                        {u.is_active ? (
-                                            <ToggleRight className="h-5 w-5 text-emerald-500" />
-                                        ) : (
-                                            <ToggleLeft className="h-5 w-5 text-slate-400" />
-                                        )}
-                                    </button>
-                                </td>
-                                <td className="px-4 py-3 text-right font-mono text-xs">{u.credits_left}</td>
-                                <td className="px-4 py-3 text-right text-xs text-slate-400">
-                                    {u.last_login ? formatDateTime(u.last_login) : "Never"}
-                                </td>
+                {usersLoading ? (
+                    <div className="flex h-32 items-center justify-center">
+                        <div className="h-6 w-6 animate-spin rounded-full border-4 border-nebula-200 border-t-nebula-500" />
+                    </div>
+                ) : (
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b bg-nebula-50/30">
+                                <th className="px-4 py-3 text-left font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Email</th>
+                                <th className="px-4 py-3 text-left font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Nume</th>
+                                <th className="px-4 py-3 text-left font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Rol</th>
+                                <th className="px-4 py-3 text-center font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Activ</th>
+                                <th className="px-4 py-3 text-right font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Credite</th>
+                                <th className="px-4 py-3 text-right font-rajdhani font-semibold uppercase tracking-wider text-slate-400">Ultimul Login</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {(usersData?.users || []).map((u: any) => (
+                                <tr key={u.id} className="border-b hover:bg-slate-50/50">
+                                    <td className="px-4 py-3 font-medium">{u.email}</td>
+                                    <td className="px-4 py-3 text-slate-500">{u.full_name || "—"}</td>
+                                    <td className="px-4 py-3">
+                                        <select
+                                            value={u.role}
+                                            onChange={(e) => roleMutation.mutate({ userId: u.id, role: e.target.value })}
+                                            className="rounded border px-2 py-0.5 text-xs"
+                                        >
+                                            <option value="viewer">viewer</option>
+                                            <option value="analyst">analyst</option>
+                                            <option value="admin">admin</option>
+                                        </select>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <button onClick={() => toggleMutation.mutate(u.id)} title={u.is_active ? "Dezactivează" : "Activează"}>
+                                            {u.is_active ? (
+                                                <ToggleRight className="h-5 w-5 text-emerald-500" />
+                                            ) : (
+                                                <ToggleLeft className="h-5 w-5 text-slate-400" />
+                                            )}
+                                        </button>
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-mono text-xs">{u.credits_left}</td>
+                                    <td className="px-4 py-3 text-right text-xs text-slate-400">
+                                        {u.last_login ? formatDateTime(u.last_login) : "—"}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t px-4 py-3">
+                        <button
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page <= 1}
+                            className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                        >
+                            <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+                        </button>
+                        <span className="font-rajdhani text-xs text-slate-400">
+                            Pagina {page} / {totalPages}
+                        </span>
+                        <button
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page >= totalPages}
+                            className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                        >
+                            Următor <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

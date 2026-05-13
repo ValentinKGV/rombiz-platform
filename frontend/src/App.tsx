@@ -50,6 +50,7 @@ const CourtCasesPage = lazy(() => import("@/pages/CourtCasesPage"));
 const DosarDetaliilePage = lazy(() => import("@/pages/DosarDetaliilePage"));
 const BVBPage = lazy(() => import("@/pages/BVBPage"));
 const MyCompanyPage = lazy(() => import("@/pages/MyCompanyPage"));
+const BlockchainAuditPage = lazy(() => import("@/pages/BlockchainAuditPage"));
 
 /** Shimmer skeleton for Suspense fallback */
 function RouteFallback() {
@@ -116,11 +117,17 @@ export default function App() {
                 closeButton
             />
             <Routes>
-                {/* Public */}
+                {/* Public — no auth required */}
                 <Route path="/login" element={<Suspense fallback={<RouteFallback />}><LoginPage /></Suspense>} />
                 <Route path="/register" element={<Suspense fallback={<RouteFallback />}><RegisterPage /></Suspense>} />
                 <Route path="/forgot-password" element={<Suspense fallback={<RouteFallback />}><ForgotPasswordPage /></Suspense>} />
                 <Route path="/reset-password" element={<Suspense fallback={<RouteFallback />}><ResetPasswordPage /></Suspense>} />
+
+                {/* Public pages with layout — no auth required */}
+                <Route element={<DashboardLayout />}>
+                    <Route path="search" element={<Suspense fallback={<RouteFallback />}><SearchPage /></Suspense>} />
+                    <Route path="company/:cui" element={<Suspense fallback={<RouteFallback />}><CompanyProfilePage /></Suspense>} />
+                </Route>
 
                 {/* Protected */}
                 <Route
@@ -132,8 +139,6 @@ export default function App() {
                     }
                 >
                     <Route index element={<Suspense fallback={<RouteFallback />}><DashboardPage /></Suspense>} />
-                    <Route path="search" element={<Suspense fallback={<RouteFallback />}><SearchPage /></Suspense>} />
-                    <Route path="company/:cui" element={<Suspense fallback={<RouteFallback />}><CompanyProfilePage /></Suspense>} />
                     <Route path="portfolios" element={<Suspense fallback={<RouteFallback />}><PortfoliosPage /></Suspense>} />
                     <Route path="alerts" element={<Suspense fallback={<RouteFallback />}><AlertsPage /></Suspense>} />
                     <Route path="seap" element={<Suspense fallback={<RouteFallback />}><SEAPPage /></Suspense>} />
@@ -156,6 +161,7 @@ export default function App() {
                     <Route path="portfolio-opt" element={<Suspense fallback={<RouteFallback />}><PortfolioOptimizationPage /></Suspense>} />
                     <Route path="international" element={<Suspense fallback={<RouteFallback />}><InternationalExpansionPage /></Suspense>} />
                     <Route path="audit-log" element={<Suspense fallback={<RouteFallback />}><AuditLogPage /></Suspense>} />
+                    <Route path="blockchain" element={<Suspense fallback={<RouteFallback />}><BlockchainAuditPage /></Suspense>} />
                     <Route path="crm" element={<Suspense fallback={<RouteFallback />}><CRMDataPage /></Suspense>} />
                     <Route path="co2" element={<Suspense fallback={<RouteFallback />}><CO2DataPage /></Suspense>} />
                     <Route path="my-esg" element={<Suspense fallback={<RouteFallback />}><MyESGDataPage /></Suspense>} />

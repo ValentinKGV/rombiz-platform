@@ -277,13 +277,9 @@ export interface AdminDashboard {
     total_companies: number;
     total_users: number;
     total_organizations: number;
-    active_alerts: number;
+    total_alerts_today: number;
+    api_calls_today: number;
     data_sources: DataSourceHealth[];
-    sync_stats: {
-        today: number;
-        week: number;
-        failed: number;
-    };
 }
 
 // ── Reports ──

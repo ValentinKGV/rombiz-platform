@@ -10,8 +10,9 @@ Branch 11 improvements:
 """
 from __future__ import annotations
 
+import asyncio
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
@@ -25,7 +26,7 @@ from app.core.security import (
 )
 from app.models.models import (
     User, Organization, Company, DataSourceSyncLog,
-    AuditLog, ReportExport, BlockchainBlock, CustodyRecord, DocumentHash,
+    AuditLog, Alert, ReportExport, BlockchainBlock, CustodyRecord, DocumentHash,
 )
 from app.schemas.schemas import AdminDashboardSchema, DataSourceHealthSchema
 
@@ -42,14 +43,26 @@ async def admin_dashboard(
     user: TokenPayload = Depends(require_role("admin")),
 ):
     """Admin dashboard with system overview."""
-    total_companies = await db.execute(select(func.count(Company.id)))
-    total_users = await db.execute(select(func.count(User.id)))
-    total_orgs = await db.execute(select(func.count(Organization.id)))
+    today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+
+    total_companies, total_users, total_orgs, alerts_today, calls_today = await asyncio.gather(
+        db.execute(select(func.count(Company.id))),
+        db.execute(select(func.count(User.id))),
+        db.execute(select(func.count(Organization.id))),
+        db.execute(
+            select(func.count(Alert.id)).where(Alert.created_at >= today_start)
+        ),
+        db.execute(
+            select(func.count(AuditLog.id)).where(AuditLog.created_at >= today_start)
+        ),
+    )
 
     return AdminDashboardSchema(
         total_companies=total_companies.scalar() or 0,
         total_users=total_users.scalar() or 0,
         total_organizations=total_orgs.scalar() or 0,
+        total_alerts_today=alerts_today.scalar() or 0,
+        api_calls_today=calls_today.scalar() or 0,
     )
 
 

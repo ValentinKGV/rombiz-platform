@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import datetime, timezone, date
 from typing import Optional
 
+import httpx
 from sqlalchemy import select   
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -119,8 +120,17 @@ class BPICollector(BaseConnector):
         """Parse BPI RSS feed for latest insolvency publications."""
         cases = []
         try:
-            response = await self.request("GET", self.RSS_URL, base_url_override=True)
-            content = response.text
+            # Use a direct httpx client with the full RSS URL — the base client
+            # uses BASE_URL (bpi.ro) which differs from the RSS host (buletinul.ro).
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(30.0, connect=10.0),
+                headers={"User-Agent": "RomBiz-Intelligence/1.0"},
+                follow_redirects=True,
+                verify=False,
+            ) as client:
+                response = await client.get(self.RSS_URL)
+                response.raise_for_status()
+                content = response.text
 
             import feedparser
             feed = feedparser.parse(content)

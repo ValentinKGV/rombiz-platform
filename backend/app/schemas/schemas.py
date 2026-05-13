@@ -635,4 +635,5 @@ class AdminDashboardSchema(BaseModel):
     total_users: int = 0
     total_organizations: int = 0
     total_alerts_today: int = 0
+    api_calls_today: int = 0
     data_sources: list[DataSourceHealthSchema] = []
