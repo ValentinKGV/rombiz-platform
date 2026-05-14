@@ -1,18 +1,39 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useThemeStore } from "@/store/theme";
 import api from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
-    TrendingUp, TrendingDown, BarChart3, Activity,
-    PieChart as PieIcon, Building2, ArrowUpRight, ArrowDownRight,
-    Minus, RefreshCw, Search, Filter,
+    TrendingUp,
+    TrendingDown,
+    BarChart3,
+    Activity,
+    PieChart as PieIcon,
+    Building2,
+    ArrowUpRight,
+    ArrowDownRight,
+    Minus,
+    RefreshCw,
+    Search,
+    Filter,
 } from "lucide-react";
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
-    Legend, ScatterChart, Scatter, ZAxis, ReferenceLine,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Legend,
+    ScatterChart,
+    Scatter,
+    ZAxis,
+    ReferenceLine,
 } from "recharts";
 
 /* ─────────────────────────────────────────────
@@ -71,6 +92,9 @@ const SEGMENT_COLORS: Record<string, string> = {
     Necunoscut: "#64748b",
 };
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 25;
+
 /* ─────────────────────────────────────────────
    Helpers
 ───────────────────────────────────────────── */
@@ -86,6 +110,11 @@ function formatPct(v?: number | null) {
     if (v == null) return "—";
     const sign = v > 0 ? "+" : "";
     return `${sign}${v.toFixed(2)}%`;
+}
+
+function getErrorMessage(error: unknown) {
+    if (error instanceof Error) return error.message;
+    return "A apărut o eroare la încărcarea datelor.";
 }
 
 function PctBadge({ value }: { value?: number | null }) {
@@ -109,6 +138,81 @@ function PctBadge({ value }: { value?: number | null }) {
             <Minus className="h-3.5 w-3.5" />
             0.00%
         </span>
+    );
+}
+
+/* ─────────────────────────────────────────────
+   Loading / Empty / Error UI
+───────────────────────────────────────────── */
+function TableSkeleton() {
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="border-b border-slate-100 dark:border-slate-700/60">
+                        {["Ticker / ISIN", "Denumire", "Segment", "Preț (RON)", "Variație %", "Volum", "Capitalizare"].map(
+                            (header) => (
+                                <th
+                                    key={header}
+                                    className="pb-3 text-left font-rajdhani text-xs uppercase tracking-wider text-slate-400 pr-4"
+                                >
+                                    {header}
+                                </th>
+                            )
+                        )}
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-700/40">
+                    {Array.from({ length: 8 }).map((_, index) => (
+                        <tr key={index}>
+                            {Array.from({ length: 7 }).map((__, cellIndex) => (
+                                <td key={cellIndex} className="py-3 pr-4">
+                                    <div className="h-4 w-full max-w-[140px] animate-pulse rounded bg-slate-200/80 dark:bg-slate-700/70" />
+                                </td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+function ErrorState({
+    message,
+    onRetry,
+}: {
+    message: string;
+    onRetry: () => void;
+}) {
+    return (
+        <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+            <div className="rounded-full bg-rose-100 px-4 py-2 text-sm font-rajdhani font-semibold text-rose-600 dark:bg-rose-900/30 dark:text-rose-300">
+                Nu s-au putut încărca datele BVB.
+            </div>
+            <p className="max-w-md text-xs text-slate-400">{message}</p>
+            <button
+                onClick={onRetry}
+                className="flex items-center gap-1.5 rounded-lg border border-indigo-200/60 bg-white/70 px-3 py-2 text-xs font-rajdhani font-semibold text-slate-600 transition-colors hover:bg-indigo-50 dark:border-slate-600/60 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Reîncearcă
+            </button>
+        </div>
+    );
+}
+
+function ChartsSkeleton() {
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className={cn(WIDGET, "h-[330px] animate-pulse p-5 lg:col-span-2")} />
+                <div className={cn(WIDGET, "h-[330px] animate-pulse p-5")} />
+            </div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className={cn(WIDGET, "h-[350px] animate-pulse p-5 lg:col-span-3")} />
+            </div>
+        </div>
     );
 }
 
@@ -149,14 +253,14 @@ function KPICards({ stats }: { stats: BVBStats }) {
     ];
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {kpis.map((k) => {
                 const Icon = k.icon;
                 return (
-                    <div key={k.label} className={cn(WIDGET, "p-4 flex items-center gap-4")}>
+                    <div key={k.label} className={cn(WIDGET, "flex items-center gap-4 p-4")}>
                         <div
                             className={cn(
-                                "flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg flex-shrink-0",
+                                "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg",
                                 k.color
                             )}
                         >
@@ -166,10 +270,10 @@ function KPICards({ stats }: { stats: BVBStats }) {
                             <p className="font-rajdhani text-xs uppercase tracking-wider text-slate-400">
                                 {k.label}
                             </p>
-                            <p className="font-orbitron text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
+                            <p className="truncate font-orbitron text-xl font-bold text-slate-800 dark:text-slate-100">
                                 {k.value}
                             </p>
-                            <p className="font-rajdhani text-[10px] text-slate-400 truncate">{k.sub}</p>
+                            <p className="truncate font-rajdhani text-[10px] text-slate-400">{k.sub}</p>
                         </div>
                     </div>
                 );
@@ -192,15 +296,19 @@ function SegmentPieChart({ stats }: { stats: BVBStats }) {
         color: dark ? "#e2e8f0" : "#1e293b",
     };
 
-    const data = stats.by_segment.map((s) => ({
-        name: s.segment,
-        value: Number(s.count),
-        color: SEGMENT_COLORS[s.segment] || "#64748b",
-    }));
+    const data = useMemo(
+        () =>
+            stats.by_segment.map((s) => ({
+                name: s.segment,
+                value: Number(s.count),
+                color: SEGMENT_COLORS[s.segment] || "#64748b",
+            })),
+        [stats.by_segment]
+    );
 
     return (
         <div className={cn(WIDGET, "p-5")}>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="mb-4 flex items-center gap-2">
                 <PieIcon className="h-4 w-4 text-violet-500" />
                 <h3 className="font-orbitron text-sm font-semibold text-slate-700 dark:text-slate-200">
                     Distribuție Segmente
@@ -220,27 +328,19 @@ function SegmentPieChart({ stats }: { stats: BVBStats }) {
                         labelLine={false}
                     >
                         {data.map((d, i) => (
-                            <Cell
-                                key={i}
-                                fill={d.color}
-                                stroke={dark ? "#0f172a" : "white"}
-                                strokeWidth={2}
-                            />
+                            <Cell key={i} fill={d.color} stroke={dark ? "#0f172a" : "white"} strokeWidth={2} />
                         ))}
                     </Pie>
                     <Tooltip contentStyle={tooltipStyle} />
                 </PieChart>
             </ResponsiveContainer>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
+            <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
                 {data.map((d) => (
                     <span
                         key={d.name}
-                        className="flex items-center gap-1 text-[11px] font-rajdhani text-slate-500 dark:text-slate-400"
+                        className="flex items-center gap-1 font-rajdhani text-[11px] text-slate-500 dark:text-slate-400"
                     >
-                        <span
-                            className="inline-block h-2 w-2 rounded-full"
-                            style={{ backgroundColor: d.color }}
-                        />
+                        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
                         {d.name}
                     </span>
                 ))}
@@ -266,27 +366,30 @@ function GainersLosersChart({ stats }: { stats: BVBStats }) {
         color: dark ? "#e2e8f0" : "#1e293b",
     };
 
-    // Combine top gainers + losers for bar chart
-    const allData = [
-        ...stats.top_gainers.map((c) => ({
-            ticker: c.ticker || c.cui,
-            change_pct: c.change_pct || 0,
-            last_price: c.last_price,
-            denumire: c.denumire,
-            fill: "#10b981",
-        })),
-        ...stats.top_losers.map((c) => ({
-            ticker: c.ticker || c.cui,
-            change_pct: c.change_pct || 0,
-            last_price: c.last_price,
-            denumire: c.denumire,
-            fill: "#f43f5e",
-        })),
-    ].sort((a, b) => b.change_pct - a.change_pct);
+    const allData = useMemo(
+        () =>
+            [
+                ...stats.top_gainers.map((c) => ({
+                    ticker: c.ticker || c.cui,
+                    change_pct: c.change_pct || 0,
+                    last_price: c.last_price,
+                    denumire: c.denumire,
+                    fill: "#10b981",
+                })),
+                ...stats.top_losers.map((c) => ({
+                    ticker: c.ticker || c.cui,
+                    change_pct: c.change_pct || 0,
+                    last_price: c.last_price,
+                    denumire: c.denumire,
+                    fill: "#f43f5e",
+                })),
+            ].sort((a, b) => b.change_pct - a.change_pct),
+        [stats.top_gainers, stats.top_losers]
+    );
 
     return (
         <div className={cn(WIDGET, "p-5 lg:col-span-2")}>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="mb-4 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-indigo-500" />
                 <h3 className="font-orbitron text-sm font-semibold text-slate-700 dark:text-slate-200">
                     Top Creșteri & Scăderi Zi
@@ -300,12 +403,7 @@ function GainersLosersChart({ stats }: { stats: BVBStats }) {
                         tick={tickStyle}
                         tickFormatter={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`}
                     />
-                    <YAxis
-                        dataKey="ticker"
-                        type="category"
-                        tick={{ ...tickStyle, fontSize: 10 }}
-                        width={78}
-                    />
+                    <YAxis dataKey="ticker" type="category" tick={{ ...tickStyle, fontSize: 10 }} width={78} />
                     <Tooltip
                         contentStyle={tooltipStyle}
                         formatter={(val: number) => [`${val > 0 ? "+" : ""}${val.toFixed(2)}%`, "Variație"]}
@@ -343,34 +441,39 @@ function PriceDistributionChart({ companies }: { companies: BVBCompany[] }) {
         color: dark ? "#e2e8f0" : "#1e293b",
     };
 
-    // Scatter: last_price vs change_pct with segment color
-    const scatterData = companies
-        .filter((c) => c.last_price != null && c.change_pct != null)
-        .map((c) => ({
-            x: c.last_price as number,
-            y: c.change_pct as number,
-            z: 80,
-            name: c.ticker || c.cui,
-            segment: c.segment || "Necunoscut",
-            denumire: c.denumire,
-        }));
+    const scatterData = useMemo(
+        () =>
+            companies
+                .filter((c) => c.last_price != null && c.change_pct != null)
+                .map((c) => ({
+                    x: c.last_price as number,
+                    y: c.change_pct as number,
+                    z: 80,
+                    name: c.ticker || c.cui,
+                    segment: c.segment || "Necunoscut",
+                    denumire: c.denumire,
+                })),
+        [companies]
+    );
 
-    // Group by segment for scatter series
-    const bySegment: Record<string, typeof scatterData> = {};
-    scatterData.forEach((d) => {
-        if (!bySegment[d.segment]) bySegment[d.segment] = [];
-        bySegment[d.segment].push(d);
-    });
+    const bySegment = useMemo(() => {
+        const grouped: Record<string, typeof scatterData> = {};
+        scatterData.forEach((d) => {
+            if (!grouped[d.segment]) grouped[d.segment] = [];
+            grouped[d.segment].push(d);
+        });
+        return grouped;
+    }, [scatterData]);
 
     return (
         <div className={cn(WIDGET, "p-5 lg:col-span-3")}>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="mb-4 flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-cyan-500" />
                 <h3 className="font-orbitron text-sm font-semibold text-slate-700 dark:text-slate-200">
-                    Preț vs Variație Zi (toate companiile)
+                    Preț vs Variație Zi
                 </h3>
-                <span className="ml-auto text-[11px] font-rajdhani text-slate-400">
-                    {scatterData.length} companii cu date
+                <span className="ml-auto font-rajdhani text-[11px] text-slate-400">
+                    {scatterData.length} companii cu date pe pagina curentă
                 </span>
             </div>
             <ResponsiveContainer width="100%" height={280}>
@@ -411,9 +514,7 @@ function PriceDistributionChart({ companies }: { companies: BVBCompany[] }) {
                         }}
                     />
                     <ReferenceLine y={0} stroke={dark ? "#475569" : "#94a3b8"} strokeDasharray="4 4" />
-                    <Legend
-                        wrapperStyle={{ fontFamily: "Rajdhani", fontSize: 12, color: dark ? "#94a3b8" : "#475569" }}
-                    />
+                    <Legend wrapperStyle={{ fontFamily: "Rajdhani", fontSize: 12, color: dark ? "#94a3b8" : "#475569" }} />
                     {Object.entries(bySegment).map(([seg, data]) => (
                         <Scatter
                             key={seg}
@@ -429,18 +530,49 @@ function PriceDistributionChart({ companies }: { companies: BVBCompany[] }) {
     );
 }
 
+function ChartsSection({
+    stats,
+    companies,
+}: {
+    stats: BVBStats;
+    companies: BVBCompany[];
+}) {
+    return (
+        <>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <GainersLosersChart stats={stats} />
+                <SegmentPieChart stats={stats} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <PriceDistributionChart companies={companies} />
+            </div>
+        </>
+    );
+}
+
+const LazyChartsSection = lazy(async () => ({
+    default: ChartsSection,
+}));
+
 /* ─────────────────────────────────────────────
    Main Page
 ───────────────────────────────────────────── */
 export default function BVBPage() {
-    const dark = useThemeStore((s) => s.dark);
     const [search, setSearch] = useState("");
     const [segmentFilter, setSegmentFilter] = useState<string>("");
     const [sortBy, setSortBy] = useState<"last_price" | "change_pct" | "denumire">("last_price");
     const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
     const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-    const { data: stats, isLoading: statsLoading } = useQuery<BVBStats>({
+    const {
+        data: stats,
+        isLoading: statsLoading,
+        isError: statsIsError,
+        error: statsError,
+        refetch: refetchStats,
+    } = useQuery<BVBStats>({
         queryKey: ["bvb", "stats"],
         queryFn: async () => {
             const { data } = await api.get("/bvb/stats");
@@ -449,47 +581,70 @@ export default function BVBPage() {
         staleTime: 5 * 60 * 1000,
     });
 
-    const { data: bvbData, isLoading: companiesLoading, refetch } = useQuery<BVBResponse>({
-        queryKey: ["bvb", "companies", segmentFilter, sortBy, sortDir, page],
+    const {
+        data: bvbData,
+        isLoading: companiesLoading,
+        isFetching: companiesFetching,
+        isError: companiesIsError,
+        error: companiesError,
+        refetch: refetchCompanies,
+    } = useQuery<BVBResponse>({
+        queryKey: ["bvb", "companies", segmentFilter, sortBy, sortDir, page, pageSize],
         queryFn: async () => {
             const params = new URLSearchParams();
             if (segmentFilter) params.set("segment", segmentFilter);
             params.set("sort_by", sortBy);
             params.set("sort_dir", sortDir);
             params.set("page", page.toString());
-            params.set("per_page", "100");
+            params.set("per_page", pageSize.toString());
+
             const { data } = await api.get(`/bvb/companies?${params}`);
             return data;
         },
+        placeholderData: (previousData) => previousData,
         staleTime: 5 * 60 * 1000,
     });
 
-    // Client-side search filter
-    const filtered = useMemo(() => {
-        if (!bvbData?.items) return [];
-        if (!search.trim()) return bvbData.items;
-        const q = search.toLowerCase();
-        return bvbData.items.filter(
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
+    const filteredCompanies = useMemo(() => {
+        const items = bvbData?.items ?? [];
+        const q = search.trim().toLowerCase();
+
+        if (!q) return items;
+
+        return items.filter(
             (c) =>
                 c.denumire?.toLowerCase().includes(q) ||
                 c.ticker?.toLowerCase().includes(q) ||
                 c.isin?.toLowerCase().includes(q) ||
                 c.cui?.toString().includes(q)
         );
-    }, [bvbData, search]);
+    }, [bvbData?.items, search]);
 
-    const isLoading = statsLoading || companiesLoading;
+    const totalPages = Math.max(1, bvbData?.pages ?? 1);
+    const canGoPrevious = page > 1;
+    const canGoNext = page < totalPages;
+    const isInitialLoading = statsLoading || companiesLoading;
+    const isRefreshing = companiesFetching && !companiesLoading;
+
+    const handleRefresh = () => {
+        refetchStats();
+        refetchCompanies();
+    };
 
     return (
         <div
-            className="min-h-screen -m-6 p-6 space-y-6 bg-gradient-to-br from-slate-50 via-indigo-50/40 to-violet-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
+            className="min-h-screen -m-6 space-y-6 bg-gradient-to-br from-slate-50 via-indigo-50/40 to-violet-50/30 p-6 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
             style={{
                 backgroundImage:
                     "radial-gradient(circle at 20% 50%, rgba(99,102,241,0.06) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(139,92,246,0.05) 0%, transparent 50%), radial-gradient(circle at 60% 80%, rgba(236,72,153,0.04) 0%, transparent 50%)",
             }}
         >
-            {/* ── Header ── */}
-            <div className="section-header flex items-start justify-between">
+            {/* Header */}
+            <div className="section-header flex items-start justify-between gap-4">
                 <div>
                     <h1 className="font-orbitron text-2xl font-bold tracking-wide text-nebula">
                         BVB — Bursa de Valori București
@@ -498,67 +653,72 @@ export default function BVBPage() {
                         Companii listate la bursă · date de piață în timp real
                     </p>
                 </div>
+
                 <button
-                    onClick={() => refetch()}
-                    className="flex items-center gap-1.5 rounded-lg border border-indigo-200/60 dark:border-slate-600/60 bg-white/60 dark:bg-slate-800/60 px-3 py-2 text-xs font-rajdhani font-semibold text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-700/60 transition-colors"
+                    onClick={handleRefresh}
+                    disabled={isInitialLoading || isRefreshing}
+                    className="flex items-center gap-1.5 rounded-lg border border-indigo-200/60 bg-white/60 px-3 py-2 text-xs font-rajdhani font-semibold text-slate-600 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600/60 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-700/60"
                 >
-                    <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
+                    <RefreshCw className={cn("h-3.5 w-3.5", (isInitialLoading || isRefreshing) && "animate-spin")} />
                     Reîmprospătare
                 </button>
             </div>
 
-            {/* ── KPI Cards ── */}
+            {statsIsError && (
+                <div className={cn(WIDGET, "p-5")}>
+                    <ErrorState message={getErrorMessage(statsError)} onRetry={() => refetchStats()} />
+                </div>
+            )}
+
             {stats && <KPICards stats={stats} />}
 
-            {/* ── Charts Row 1 ── */}
             {stats && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <GainersLosersChart stats={stats} />
-                    <SegmentPieChart stats={stats} />
-                </div>
+                <Suspense fallback={<ChartsSkeleton />}>
+                    <LazyChartsSection stats={stats} companies={filteredCompanies} />
+                </Suspense>
             )}
 
-            {/* ── Scatter Chart ── */}
-            {bvbData && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <PriceDistributionChart companies={bvbData.items} />
-                </div>
-            )}
-
-            {/* ── Table ── */}
+            {/* Table */}
             <div className={cn(WIDGET, "p-5")}>
-                <div className="flex flex-wrap items-center gap-3 mb-5">
-                    <div className="flex items-center gap-2 mr-auto">
+                <div className="mb-5 flex flex-wrap items-center gap-3">
+                    <div className="mr-auto flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-indigo-500" />
                         <h3 className="font-orbitron text-sm font-semibold text-slate-700 dark:text-slate-200">
                             Companii Listate
                         </h3>
                         {bvbData && (
-                            <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-[10px] font-orbitron text-indigo-600 dark:text-indigo-300">
-                                {filtered.length} / {bvbData.total}
+                            <span className="rounded-full bg-indigo-100 px-2 py-0.5 font-orbitron text-[10px] text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300">
+                                {filteredCompanies.length} afișate / {bvbData.total} total
+                            </span>
+                        )}
+                        {isRefreshing && (
+                            <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 font-rajdhani text-[10px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                actualizare
                             </span>
                         )}
                     </div>
 
-                    {/* Search */}
                     <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Caută ticker, ISIN, denumire..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-56 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 pl-8 pr-3 py-1.5 text-xs font-rajdhani text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                            className="w-56 rounded-lg border border-slate-200 bg-white/70 py-1.5 pl-8 pr-3 font-rajdhani text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-400 dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-300"
                         />
                     </div>
 
-                    {/* Segment filter */}
                     <div className="flex items-center gap-1.5">
                         <Filter className="h-3.5 w-3.5 text-slate-400" />
                         <select
                             value={segmentFilter}
-                            onChange={(e) => { setSegmentFilter(e.target.value); setPage(1); }}
-                            className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 px-2 py-1.5 text-xs font-rajdhani text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                            onChange={(e) => {
+                                setSegmentFilter(e.target.value);
+                                setPage(1);
+                            }}
+                            className="rounded-lg border border-slate-200 bg-white/70 px-2 py-1.5 font-rajdhani text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-300"
                         >
                             <option value="">Toate segmentele</option>
                             <option value="Premium">Premium</option>
@@ -567,7 +727,6 @@ export default function BVBPage() {
                         </select>
                     </div>
 
-                    {/* Sort */}
                     <select
                         value={`${sortBy}-${sortDir}`}
                         onChange={(e) => {
@@ -576,7 +735,7 @@ export default function BVBPage() {
                             setSortDir(sd as typeof sortDir);
                             setPage(1);
                         }}
-                        className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white/70 dark:bg-slate-800/70 px-2 py-1.5 text-xs font-rajdhani text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                        className="rounded-lg border border-slate-200 bg-white/70 px-2 py-1.5 font-rajdhani text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-300"
                     >
                         <option value="last_price-desc">Preț descrescător</option>
                         <option value="last_price-asc">Preț crescător</option>
@@ -585,33 +744,48 @@ export default function BVBPage() {
                         <option value="denumire-asc">Denumire A→Z</option>
                         <option value="denumire-desc">Denumire Z→A</option>
                     </select>
+
+                    <select
+                        value={pageSize}
+                        onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setPage(1);
+                        }}
+                        className="rounded-lg border border-slate-200 bg-white/70 px-2 py-1.5 font-rajdhani text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 dark:border-slate-600 dark:bg-slate-800/70 dark:text-slate-300"
+                    >
+                        {PAGE_SIZE_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                                {option} / pagină
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <RefreshCw className="h-6 w-6 animate-spin text-indigo-400" />
-                    </div>
+                {companiesIsError ? (
+                    <ErrorState message={getErrorMessage(companiesError)} onRetry={() => refetchCompanies()} />
+                ) : isInitialLoading ? (
+                    <TableSkeleton />
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-slate-100 dark:border-slate-700/60">
-                                    <th className="pb-3 text-left font-rajdhani text-xs uppercase tracking-wider text-slate-400 pr-4">
+                                    <th className="pb-3 pr-4 text-left font-rajdhani text-xs uppercase tracking-wider text-slate-400">
                                         Ticker / ISIN
                                     </th>
-                                    <th className="pb-3 text-left font-rajdhani text-xs uppercase tracking-wider text-slate-400 pr-4">
+                                    <th className="pb-3 pr-4 text-left font-rajdhani text-xs uppercase tracking-wider text-slate-400">
                                         Denumire
                                     </th>
-                                    <th className="pb-3 text-left font-rajdhani text-xs uppercase tracking-wider text-slate-400 pr-4">
+                                    <th className="pb-3 pr-4 text-left font-rajdhani text-xs uppercase tracking-wider text-slate-400">
                                         Segment
                                     </th>
-                                    <th className="pb-3 text-right font-rajdhani text-xs uppercase tracking-wider text-slate-400 pr-4">
+                                    <th className="pb-3 pr-4 text-right font-rajdhani text-xs uppercase tracking-wider text-slate-400">
                                         Preț (RON)
                                     </th>
-                                    <th className="pb-3 text-right font-rajdhani text-xs uppercase tracking-wider text-slate-400 pr-4">
+                                    <th className="pb-3 pr-4 text-right font-rajdhani text-xs uppercase tracking-wider text-slate-400">
                                         Variație %
                                     </th>
-                                    <th className="pb-3 text-right font-rajdhani text-xs uppercase tracking-wider text-slate-400 pr-4">
+                                    <th className="pb-3 pr-4 text-right font-rajdhani text-xs uppercase tracking-wider text-slate-400">
                                         Volum
                                     </th>
                                     <th className="pb-3 text-right font-rajdhani text-xs uppercase tracking-wider text-slate-400">
@@ -620,17 +794,17 @@ export default function BVBPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50 dark:divide-slate-700/40">
-                                {filtered.map((company) => (
+                                {filteredCompanies.map((company) => (
                                     <tr
                                         key={company.id}
-                                        className="group hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-colors"
+                                        className="group transition-colors hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10"
                                     >
                                         <td className="py-3 pr-4">
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="font-orbitron text-xs font-bold text-indigo-600 dark:text-indigo-400">
                                                     {company.ticker || "—"}
                                                 </span>
-                                                <span className="font-mono text-[9px] text-slate-400 truncate max-w-[120px]">
+                                                <span className="max-w-[120px] truncate font-mono text-[9px] text-slate-400">
                                                     {company.isin || "—"}
                                                 </span>
                                             </div>
@@ -638,7 +812,7 @@ export default function BVBPage() {
                                         <td className="py-3 pr-4">
                                             <Link
                                                 to={`/company/${company.cui}`}
-                                                className="font-rajdhani text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors line-clamp-2 max-w-[220px]"
+                                                className="line-clamp-2 max-w-[220px] font-rajdhani text-sm font-semibold text-slate-700 transition-colors hover:text-indigo-600 dark:text-slate-200 dark:hover:text-indigo-400"
                                                 title={company.denumire}
                                             >
                                                 {company.denumire}
@@ -652,10 +826,9 @@ export default function BVBPage() {
                                         <td className="py-3 pr-4">
                                             {company.segment ? (
                                                 <span
-                                                    className="inline-block rounded-full px-2 py-0.5 text-[10px] font-rajdhani font-semibold text-white"
+                                                    className="inline-block rounded-full px-2 py-0.5 font-rajdhani text-[10px] font-semibold text-white"
                                                     style={{
-                                                        backgroundColor:
-                                                            SEGMENT_COLORS[company.segment] || "#64748b",
+                                                        backgroundColor: SEGMENT_COLORS[company.segment] || "#64748b",
                                                     }}
                                                 >
                                                     {company.segment}
@@ -671,21 +844,20 @@ export default function BVBPage() {
                                             <PctBadge value={company.change_pct} />
                                         </td>
                                         <td className="py-3 pr-4 text-right font-mono text-xs text-slate-500 dark:text-slate-400">
-                                            {company.volume != null
-                                                ? company.volume.toLocaleString("ro-RO")
-                                                : "—"}
+                                            {company.volume != null ? company.volume.toLocaleString("ro-RO") : "—"}
                                         </td>
                                         <td className="py-3 text-right font-mono text-xs text-slate-500 dark:text-slate-400">
                                             {company.market_cap != null
                                                 ? new Intl.NumberFormat("ro-RO", {
-                                                    notation: "compact",
-                                                    maximumFractionDigits: 1,
-                                                }).format(company.market_cap)
+                                                      notation: "compact",
+                                                      maximumFractionDigits: 1,
+                                                  }).format(company.market_cap)
                                                 : "—"}
                                         </td>
                                     </tr>
                                 ))}
-                                {filtered.length === 0 && (
+
+                                {filteredCompanies.length === 0 && (
                                     <tr>
                                         <td colSpan={7} className="py-12 text-center font-rajdhani text-sm text-slate-400">
                                             Nu s-au găsit companii cu criteriile selectate.
@@ -697,24 +869,24 @@ export default function BVBPage() {
                     </div>
                 )}
 
-                {/* Pagination */}
-                {bvbData && bvbData.pages > 1 && (
-                    <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+                {bvbData && !companiesIsError && (
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-700/60">
                         <span className="font-rajdhani text-xs text-slate-400">
-                            Pagina {page} din {bvbData.pages} ({bvbData.total} total)
+                            Pagina {page} din {totalPages} · {bvbData.total} total · {pageSize} pe pagină
                         </span>
+
                         <div className="flex gap-2">
                             <button
-                                disabled={page === 1}
-                                onClick={() => setPage((p) => p - 1)}
-                                className="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-rajdhani text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors"
+                                disabled={!canGoPrevious || companiesFetching}
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 font-rajdhani text-xs text-slate-600 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 Înapoi
                             </button>
                             <button
-                                disabled={page === bvbData.pages}
-                                onClick={() => setPage((p) => p + 1)}
-                                className="rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-rajdhani text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors"
+                                disabled={!canGoNext || companiesFetching}
+                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 font-rajdhani text-xs text-slate-600 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 Înainte
                             </button>

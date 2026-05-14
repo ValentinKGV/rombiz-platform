@@ -63,6 +63,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
 }
 
+// function ProtectedRoute({ children }: { children: React.ReactNode }) {
+//     return <>{children}</>;
+// }
+
 export default function App() {
     const { fetchUser, isAuthenticated } = useAuthStore();
 

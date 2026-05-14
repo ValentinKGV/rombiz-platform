@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useThemeStore } from "@/store/theme";
 import api from "@/lib/api";
 import type { Tender } from "@/types";
-import { formatMoney, formatDate } from "@/lib/utils";
+import { formatMoney, formatDate, formatNumber } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import {
     Gavel, Orbit, Search, FileText, TrendingUp,
@@ -14,24 +14,30 @@ import {
     ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend,
 } from "recharts";
 
-/* ───── Demo / aggregated data for overview ───── */
-const DEMO_MONTHLY = [
-    { luna: "Oct", valoare: 48.2, licitatii: 124 },
-    { luna: "Nov", valoare: 62.5, licitatii: 156 },
-    { luna: "Dec", valoare: 35.8, licitatii: 98 },
-    { luna: "Ian", valoare: 71.3, licitatii: 189 },
-    { luna: "Feb", valoare: 54.6, licitatii: 142 },
-    { luna: "Mar", valoare: 83.1, licitatii: 211 },
+interface SeapAuthorityStat {
+    autoritate: string;
+    nr_contracte: number;
+    total_ron: number;
+}
+
+interface SeapContract {
+    id: number;
+    valoare_ron: number | null;
+    data_atribuire: string | null;
+}
+
+const PROCEDURE_COLORS = [
+    "#6366f1",
+    "#8b5cf6",
+    "#ec4899",
+    "#06b6d4",
+    "#f97316",
+    "#10b981",
+    "#f59e0b",
+    "#0ea5e9",
 ];
 
-const DEMO_BY_PROCEDURE = [
-    { name: "Licitație Deschisă", value: 42, color: "#6366f1" },
-    { name: "Cerere de Ofertă", value: 28, color: "#8b5cf6" },
-    { name: "Negociere", value: 12, color: "#ec4899" },
-    { name: "Achiziție Directă", value: 35, color: "#06b6d4" },
-    { name: "Dialog Competitiv", value: 5, color: "#f97316" },
-    { name: "Concurs Soluții", value: 3, color: "#10b981" },
-];
+const MONTH_LABELS = ["Ian", "Feb", "Mar", "Apr", "Mai", "Iun", "Iul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 
 
@@ -43,11 +49,114 @@ function SeapOverview() {
     const gridColor = dark ? "#334155" : "#e2e8f0";
     const tooltipStyle = { borderRadius: 12, fontFamily: "Exo 2", fontSize: 13, border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, backgroundColor: dark ? "#1e293b" : "#ffffff", color: dark ? "#e2e8f0" : "#1e293b" };
     const tickStyle = { fontSize: 12, fontFamily: "Rajdhani", fill: dark ? "#94a3b8" : "#475569" };
+    const today = new Date();
+    const startSixMonths = new Date(today.getFullYear(), today.getMonth() - 5, 1);
+    const startMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+
+    const { data: tendersOverview, isLoading: tendersLoading } = useQuery({
+        queryKey: ["seap", "overview", "tenders"],
+        queryFn: async () => (await api.get("/seap/tenders", { params: { page_size: 100 } })).data,
+    });
+
+    const { data: authorityStats, isLoading: authorityLoading } = useQuery<SeapAuthorityStat[]>({
+        queryKey: ["seap", "stats", "authority"],
+        queryFn: async () => (await api.get("/seap/stats/by-authority", { params: { top: 200 } })).data,
+    });
+
+    const { data: contractsOverview, isLoading: contractsLoading } = useQuery<SeapContract[]>({
+        queryKey: ["seap", "overview", "contracts", "6m"],
+        queryFn: async () => (await api.get("/seap/contracts", {
+            params: {
+                per_page: 100,
+                data_de_la: startSixMonths.toISOString().slice(0, 10),
+            },
+        })).data,
+    });
+
+    const tenderItems = (tendersOverview?.items || []) as Tender[];
+    const totalAuthorities = authorityStats?.length ?? 0;
+    const totalValueRon = authorityStats?.reduce((sum, item) => sum + (item.total_ron || 0), 0) ?? 0;
+
+    const awardedThisMonth = useMemo(() => {
+        if (!contractsOverview?.length) return 0;
+        const start = startMonth.getTime();
+        return contractsOverview.filter((c) => {
+            if (!c.data_atribuire) return false;
+            return new Date(c.data_atribuire).getTime() >= start;
+        }).length;
+    }, [contractsOverview, startMonth]);
+
+    const monthlyTrend = useMemo(() => {
+        if (!contractsOverview?.length) return [] as { luna: string; valoare: number; licitatii: number }[];
+        const buckets = new Map<string, { valoare: number; licitatii: number }>();
+        for (let i = 5; i >= 0; i -= 1) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            buckets.set(`${d.getFullYear()}-${d.getMonth()}`, { valoare: 0, licitatii: 0 });
+        }
+
+        contractsOverview.forEach((c) => {
+            if (!c.data_atribuire) return;
+            const d = new Date(c.data_atribuire);
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            const bucket = buckets.get(key);
+            if (!bucket) return;
+            bucket.licitatii += 1;
+            bucket.valoare += c.valoare_ron || 0;
+        });
+
+        return Array.from(buckets.entries()).map(([key, vals]) => {
+            const [, month] = key.split("-").map(Number);
+            return {
+                luna: MONTH_LABELS[month],
+                valoare: Math.round(vals.valoare / 1_000_000 * 10) / 10,
+                licitatii: vals.licitatii,
+            };
+        });
+    }, [contractsOverview, today]);
+
+    const byProcedure = useMemo(() => {
+        if (!tenderItems.length) return [] as { name: string; value: number; color: string }[];
+        const counts = new Map<string, number>();
+        tenderItems.forEach((t) => {
+            const label = t.procedure_type || t.tip_procedura || "N/A";
+            counts.set(label, (counts.get(label) || 0) + 1);
+        });
+
+        return Array.from(counts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([name, value], i) => ({
+                name,
+                value,
+                color: PROCEDURE_COLORS[i % PROCEDURE_COLORS.length],
+            }));
+    }, [tenderItems]);
+
     const kpis = [
-        { label: "Licitații Active", value: "211", icon: FileText, color: "from-indigo-500 to-violet-600" },
-        { label: "Valoare Totală", value: "€2.4B", icon: Euro, color: "from-emerald-500 to-teal-600" },
-        { label: "Autorități", value: "87", icon: Landmark, color: "from-orange-500 to-amber-600" },
-        { label: "Atribuite Luna", value: "45", icon: TrendingUp, color: "from-rose-500 to-pink-600" },
+        {
+            label: "Licitații Active",
+            value: tendersLoading ? "..." : formatNumber(tenderItems.length),
+            icon: FileText,
+            color: "from-indigo-500 to-violet-600",
+        },
+        {
+            label: "Valoare Totală",
+            value: authorityLoading ? "..." : formatMoney(totalValueRon, "RON"),
+            icon: Euro,
+            color: "from-emerald-500 to-teal-600",
+        },
+        {
+            label: "Autorități",
+            value: authorityLoading ? "..." : formatNumber(totalAuthorities),
+            icon: Landmark,
+            color: "from-orange-500 to-amber-600",
+        },
+        {
+            label: "Atribuite Luna",
+            value: contractsLoading ? "..." : formatNumber(awardedThisMonth),
+            icon: TrendingUp,
+            color: "from-rose-500 to-pink-600",
+        },
     ];
 
     return (
@@ -77,28 +186,36 @@ function SeapOverview() {
                         <Activity className="h-4 w-4 text-indigo-500" />
                         <h3 className="font-orbitron text-sm font-semibold text-slate-700 dark:text-slate-200">Evoluție Lunară</h3>
                     </div>
-                    <ResponsiveContainer width="100%" height={260}>
-                        <AreaChart data={DEMO_MONTHLY}>
-                            <defs>
-                                <linearGradient id="seapValGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="seapLicGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                            <XAxis dataKey="luna" tick={tickStyle} />
-                            <YAxis yAxisId="val" orientation="left" tick={tickStyle} />
-                            <YAxis yAxisId="lic" orientation="right" tick={tickStyle} />
-                            <Tooltip contentStyle={tooltipStyle} />
-                            <Legend wrapperStyle={{ fontFamily: "Rajdhani", fontSize: 12, color: dark ? "#94a3b8" : "#475569" }} />
-                            <Area yAxisId="val" type="monotone" dataKey="valoare" stroke="#6366f1" strokeWidth={2} fill="url(#seapValGrad)" name="Valoare (M€)" />
-                            <Area yAxisId="lic" type="monotone" dataKey="licitatii" stroke="#10b981" strokeWidth={2} fill="url(#seapLicGrad)" name="Nr. Licitații" />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                    {monthlyTrend.length === 0 ? (
+                        <div className="flex h-[260px] items-center justify-center text-sm text-slate-400">
+                            {contractsLoading ? "Se încarcă..." : "Nu există date"}
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={260}>
+                            <AreaChart data={monthlyTrend}>
+                                <defs>
+                                    <linearGradient id="seapValGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="seapLicGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                                <XAxis dataKey="luna" tick={tickStyle} />
+                                <YAxis yAxisId="val" orientation="left" tick={tickStyle} />
+                                <YAxis yAxisId="lic" orientation="right" tick={tickStyle} />
+                                <Tooltip contentStyle={tooltipStyle} formatter={(v: number, name: string) => (
+                                    name === "Valoare (mil RON)" ? [`${v.toLocaleString("ro-RO")} mil RON`, name] : [v, name]
+                                )} />
+                                <Legend wrapperStyle={{ fontFamily: "Rajdhani", fontSize: 12, color: dark ? "#94a3b8" : "#475569" }} />
+                                <Area yAxisId="val" type="monotone" dataKey="valoare" stroke="#6366f1" strokeWidth={2} fill="url(#seapValGrad)" name="Valoare (mil RON)" />
+                                <Area yAxisId="lic" type="monotone" dataKey="licitatii" stroke="#10b981" strokeWidth={2} fill="url(#seapLicGrad)" name="Nr. Licitații" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
 
                 <div className={cn(WIDGET, "p-5")}>
@@ -106,24 +223,32 @@ function SeapOverview() {
                         <PieIcon className="h-4 w-4 text-violet-500" />
                         <h3 className="font-orbitron text-sm font-semibold text-slate-700 dark:text-slate-200">Tip Procedură</h3>
                     </div>
-                    <ResponsiveContainer width="100%" height={200}>
-                        <PieChart>
-                            <Pie data={DEMO_BY_PROCEDURE} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value">
-                                {DEMO_BY_PROCEDURE.map((d, i) => (
-                                    <Cell key={i} fill={d.color} stroke={dark ? "#0f172a" : "white"} strokeWidth={2} />
+                    {byProcedure.length === 0 ? (
+                        <div className="flex h-[200px] items-center justify-center text-sm text-slate-400">
+                            {tendersLoading ? "Se încarcă..." : "Nu există date"}
+                        </div>
+                    ) : (
+                        <>
+                            <ResponsiveContainer width="100%" height={200}>
+                                <PieChart>
+                                    <Pie data={byProcedure} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value">
+                                        {byProcedure.map((d, i) => (
+                                            <Cell key={i} fill={d.color} stroke={dark ? "#0f172a" : "white"} strokeWidth={2} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip contentStyle={tooltipStyle} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
+                                {byProcedure.map((d) => (
+                                    <span key={d.name} className="flex items-center gap-1 text-[11px] font-rajdhani text-slate-500 dark:text-slate-400">
+                                        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
+                                        {d.name}
+                                    </span>
                                 ))}
-                            </Pie>
-                            <Tooltip contentStyle={tooltipStyle} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
-                        {DEMO_BY_PROCEDURE.map((d) => (
-                            <span key={d.name} className="flex items-center gap-1 text-[11px] font-rajdhani text-slate-500 dark:text-slate-400">
-                                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
-                                {d.name}
-                            </span>
-                        ))}
-                    </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

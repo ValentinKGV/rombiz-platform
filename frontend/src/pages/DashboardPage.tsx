@@ -80,43 +80,36 @@ interface ContractsWidget {
     period: string;
 }
 
+interface AlertsAnalytics {
+    unread: number;
+    daily_trend: { date: string; count: number }[];
+}
 
-const ACTIVITY_TREND = [
-    { zi: "Lun", companii: 12, alerte: 5, facturi: 3 },
-    { zi: "Mar", companii: 18, alerte: 8, facturi: 6 },
-    { zi: "Mie", companii: 15, alerte: 3, facturi: 4 },
-    { zi: "Joi", companii: 22, alerte: 11, facturi: 8 },
-    { zi: "Vin", companii: 19, alerte: 7, facturi: 5 },
-    { zi: "Sâm", companii: 8, alerte: 2, facturi: 1 },
-    { zi: "Dum", companii: 5, alerte: 1, facturi: 0 },
-];
+interface ESGWidget {
+    averages: {
+        total: number;
+        e: number;
+        s: number;
+        g: number;
+    };
+}
 
-const MONTHLY_REVENUE = [
-    { luna: "Oct", valoare: 145000 },
-    { luna: "Nov", valoare: 162000 },
-    { luna: "Dec", valoare: 138000 },
-    { luna: "Ian", valoare: 178000 },
-    { luna: "Feb", valoare: 195000 },
-    { luna: "Mar", valoare: 212000 },
-];
+interface CrmInvoice {
+    id: number;
+    numarFactura: string;
+    client: string;
+    valoareTotala: number;
+    status: string;
+    dataEmitere: string | null;
+    dataScadenta: string | null;
+}
 
-const QUICK_MODULES = [
-    { path: "/search", label: "Căutare Firme", icon: Search, color: "from-blue-500 to-indigo-600", desc: "Caută după CUI, denumire" },
-    { path: "/alerts", label: "Alerte", icon: Bell, color: "from-red-500 to-rose-600", desc: "43 necitite" },
-    { path: "/fraud", label: "Fraud Graph", icon: Shield, color: "from-orange-500 to-amber-600", desc: "Rețele suspecte" },
-    { path: "/portfolios", label: "Portofolii", icon: Briefcase, color: "from-violet-500 to-purple-600", desc: "Monitorizare firme" },
-    { path: "/facturi-furnizori", label: "Facturi Furnizori", icon: ReceiptText, color: "from-emerald-500 to-teal-600", desc: "42 facturi active" },
-    { path: "/ai", label: "AI Agent", icon: Bot, color: "from-cyan-500 to-blue-600", desc: "Asistent inteligent" },
-    { path: "/crm", label: "Date CRM", icon: Sparkles, color: "from-pink-500 to-rose-600", desc: "Vânzări & clienți" },
-    { path: "/my-esg", label: "Datele mele ESG", icon: Leaf, color: "from-green-500 to-emerald-600", desc: "Scor ESG 72%" },
-];
+interface CrmInvoicesResponse {
+    facturi: CrmInvoice[];
+}
 
-const FACTURI_SCADENTE = [
-    { furnizor: "MEGA DISTRIBUTION SRL", numar: "FRN-20260035", suma: 8420.50, zile: 3 },
-    { furnizor: "TECH SUPPLIES SA", numar: "FRN-20260033", suma: 15200.00, zile: 5 },
-    { furnizor: "GLOBAL LOGISTICS SA", numar: "FRN-20260036", suma: 4890.75, zile: 7 },
-    { furnizor: "ENERGY PRO SA", numar: "FRN-20260037", suma: 22100.00, zile: 12 },
-];
+const DAY_LABELS = ["Dum", "Lun", "Mar", "Mie", "Joi", "Vin", "Sâm"];
+const MONTH_LABELS = ["Ian", "Feb", "Mar", "Apr", "Mai", "Iun", "Iul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function DashboardPage() {
     const navigate = useNavigate();
@@ -146,6 +139,11 @@ export default function DashboardPage() {
         queryFn: async () => (await api.get("/dashboard/widgets/fraud")).data,
     });
 
+    const { data: esgWidget } = useQuery<ESGWidget>({
+        queryKey: ["dashboard-esg"],
+        queryFn: async () => (await api.get("/dashboard/widgets/esg")).data,
+    });
+
     const { data: ratesWidget } = useQuery<ExchangeRatesWidget>({
         queryKey: ["dashboard-rates"],
         queryFn: async () => (await api.get("/dashboard/widgets/exchange-rates")).data,
@@ -154,6 +152,16 @@ export default function DashboardPage() {
     const { data: contractsWidget } = useQuery<ContractsWidget>({
         queryKey: ["dashboard-contracts"],
         queryFn: async () => (await api.get("/dashboard/widgets/contracts", { params: { period: "30d" } })).data,
+    });
+
+    const { data: alertsAnalytics, isLoading: alertsLoading } = useQuery<AlertsAnalytics>({
+        queryKey: ["alerts-analytics", "7d"],
+        queryFn: async () => (await api.get("/alerts/analytics", { params: { days: 7 } })).data,
+    });
+
+    const { data: crmInvoices } = useQuery<CrmInvoicesResponse>({
+        queryKey: ["crm-facturi"],
+        queryFn: async () => (await api.get("/crm/facturi")).data,
     });
 
     // WebSocket real-time alerts
@@ -196,6 +204,93 @@ export default function DashboardPage() {
             (a) => !liveAlerts.some((la) => la.id === a.id)
         ),
     ].slice(0, 6);
+
+    const activityTrend = useMemo(() => {
+        if (!alertsAnalytics?.daily_trend?.length) return [] as { zi: string; alerte: number }[];
+        const counts = new Map(alertsAnalytics.daily_trend.map((d) => [d.date, d.count]));
+        const today = new Date();
+        const points = [] as { zi: string; alerte: number }[];
+        for (let i = 6; i >= 0; i -= 1) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - i);
+            const key = d.toISOString().slice(0, 10);
+            points.push({
+                zi: DAY_LABELS[d.getDay()],
+                alerte: counts.get(key) || 0,
+            });
+        }
+        return points;
+    }, [alertsAnalytics]);
+
+    const monthlyRevenue = useMemo(() => {
+        const facturi = crmInvoices?.facturi || [];
+        if (!facturi.length) return [] as { luna: string; valoare: number }[];
+
+        const now = new Date();
+        const buckets = new Map<string, number>();
+        for (let i = 5; i >= 0; i -= 1) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            buckets.set(`${d.getFullYear()}-${d.getMonth()}`, 0);
+        }
+
+        facturi.forEach((f) => {
+            if (!f.dataEmitere) return;
+            const d = new Date(f.dataEmitere);
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            if (!buckets.has(key)) return;
+            buckets.set(key, (buckets.get(key) || 0) + (f.valoareTotala || 0));
+        });
+
+        return Array.from(buckets.entries()).map(([key, valoare]) => {
+            const [year, month] = key.split("-").map(Number);
+            return {
+                luna: MONTH_LABELS[month],
+                valoare: Math.round(valoare),
+            };
+        });
+    }, [crmInvoices]);
+
+    const facturiScadente = useMemo(() => {
+        const facturi = crmInvoices?.facturi || [];
+        if (!facturi.length) return [] as { furnizor: string; numar: string; suma: number; zile: number }[];
+        const now = new Date();
+        const due = facturi
+            .map((f) => {
+                if (!f.dataScadenta) return null;
+                const dueDate = new Date(f.dataScadenta);
+                const diffMs = dueDate.getTime() - now.getTime();
+                const zile = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                if (zile < 0 || zile > 30) return null;
+                if (f.status?.toLowerCase?.() === "incasata" || f.status?.toLowerCase?.() === "anulata") return null;
+                return {
+                    furnizor: f.client || "-",
+                    numar: f.numarFactura || "-",
+                    suma: f.valoareTotala || 0,
+                    zile,
+                };
+            })
+            .filter((item): item is { furnizor: string; numar: string; suma: number; zile: number } => Boolean(item))
+            .sort((a, b) => a.zile - b.zile);
+
+        return due;
+    }, [crmInvoices]);
+
+    const quickModules = useMemo(() => {
+        const esgScore = esgWidget?.averages?.total;
+        const unreadAlerts = alertsAnalytics?.unread;
+        const facturiCount = facturiScadente.length;
+
+        return [
+            { path: "/search", label: "Căutare Firme", icon: Search, color: "from-blue-500 to-indigo-600", desc: "Caută după CUI, denumire" },
+            { path: "/alerts", label: "Alerte", icon: Bell, color: "from-red-500 to-rose-600", desc: unreadAlerts != null ? `${unreadAlerts} necitite` : "Se încarcă..." },
+            { path: "/fraud", label: "Fraud Graph", icon: Shield, color: "from-orange-500 to-amber-600", desc: "Rețele suspecte" },
+            { path: "/portfolios", label: "Portofolii", icon: Briefcase, color: "from-violet-500 to-purple-600", desc: "Monitorizare firme" },
+            { path: "/facturi-furnizori", label: "Facturi Furnizori", icon: ReceiptText, color: "from-emerald-500 to-teal-600", desc: crmInvoices ? `${facturiCount} facturi active` : "Se încarcă..." },
+            { path: "/ai", label: "AI Agent", icon: Bot, color: "from-cyan-500 to-blue-600", desc: "Asistent inteligent" },
+            { path: "/crm", label: "Date CRM", icon: Sparkles, color: "from-pink-500 to-rose-600", desc: "Vânzări & clienți" },
+            { path: "/my-esg", label: "Datele mele ESG", icon: Leaf, color: "from-green-500 to-emerald-600", desc: esgScore != null ? `Scor ESG ${esgScore}` : "Se încarcă..." },
+        ];
+    }, [alertsAnalytics, crmInvoices, esgWidget, facturiScadente.length]);
 
     if (watchlistLoading) {
         return (
@@ -296,7 +391,7 @@ export default function DashboardPage() {
 
             {/* ─── Quick Access Modules ─── */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-                {QUICK_MODULES.map((m) => {
+                {quickModules.map((m) => {
                     const Icon = m.icon;
                     return (
                         <Link
@@ -439,32 +534,28 @@ export default function DashboardPage() {
                             Activitate Săptămânală
                         </h3>
                     </div>
-                    <ResponsiveContainer width="100%" height={240}>
-                        <AreaChart data={ACTIVITY_TREND}>
-                            <defs>
-                                <linearGradient id="gradComp" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="gradAlert" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="gradFact" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
-                            <XAxis dataKey="zi" tick={chartTick} />
-                            <YAxis tick={chartTick} />
-                            <Tooltip contentStyle={chartTooltip} />
-                            <Legend wrapperStyle={{ fontFamily: "Rajdhani", fontSize: 12, color: dark ? "#94a3b8" : "#475569" }} />
-                            <Area type="monotone" dataKey="companii" stroke="#6366f1" strokeWidth={2} fill="url(#gradComp)" name="Companii vizitate" />
-                            <Area type="monotone" dataKey="alerte" stroke="#ef4444" strokeWidth={2} fill="url(#gradAlert)" name="Alerte" />
-                            <Area type="monotone" dataKey="facturi" stroke="#10b981" strokeWidth={2} fill="url(#gradFact)" name="Facturi" />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                    {activityTrend.length === 0 ? (
+                        <div className="flex h-[240px] items-center justify-center text-sm text-slate-400">
+                            {alertsLoading ? "Se încarcă..." : "Fără activitate în ultimele 7 zile"}
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={240}>
+                            <AreaChart data={activityTrend}>
+                                <defs>
+                                    <linearGradient id="gradAlert" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                                <XAxis dataKey="zi" tick={chartTick} />
+                                <YAxis tick={chartTick} />
+                                <Tooltip contentStyle={chartTooltip} />
+                                <Legend wrapperStyle={{ fontFamily: "Rajdhani", fontSize: 12, color: dark ? "#94a3b8" : "#475569" }} />
+                                <Area type="monotone" dataKey="alerte" stroke="#ef4444" strokeWidth={2} fill="url(#gradAlert)" name="Alerte" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
 
                 {/* Monthly revenue line */}
@@ -475,15 +566,21 @@ export default function DashboardPage() {
                             Valoare Facturi
                         </h3>
                     </div>
-                    <ResponsiveContainer width="100%" height={240}>
-                        <LineChart data={MONTHLY_REVENUE}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
-                            <XAxis dataKey="luna" tick={chartTick} />
-                            <YAxis tick={{ ...chartTick, fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                            <Tooltip contentStyle={chartTooltip} formatter={(v: number) => `${v.toLocaleString("ro-RO")} RON`} />
-                            <Line type="monotone" dataKey="valoare" stroke="#10b981" strokeWidth={2.5} dot={{ fill: "#10b981", r: 4 }} name="Valoare (RON)" />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    {monthlyRevenue.length === 0 ? (
+                        <div className="flex h-[240px] items-center justify-center text-sm text-slate-400">
+                            Se încarcă...
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={240}>
+                            <LineChart data={monthlyRevenue}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                                <XAxis dataKey="luna" tick={chartTick} />
+                                <YAxis tick={{ ...chartTick, fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                <Tooltip contentStyle={chartTooltip} formatter={(v: number) => `${v.toLocaleString("ro-RO")} RON`} />
+                                <Line type="monotone" dataKey="valoare" stroke="#10b981" strokeWidth={2.5} dot={{ fill: "#10b981", r: 4 }} name="Valoare (RON)" />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             </div>
 
@@ -555,7 +652,7 @@ export default function DashboardPage() {
                                 Facturi Scadente
                             </h3>
                             <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-700">
-                                {FACTURI_SCADENTE.length}
+                                {facturiScadente.length}
                             </span>
                         </div>
                         <Link
@@ -566,7 +663,7 @@ export default function DashboardPage() {
                         </Link>
                     </div>
                     <div className="space-y-3">
-                        {FACTURI_SCADENTE.map((f) => (
+                        {facturiScadente.map((f) => (
                             <div key={f.numar} className="flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/50 p-3 transition-all hover:border-amber-200 dark:hover:border-amber-700/50 hover:shadow-sm">
                                 <div className={cn(
                                     "flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0",
@@ -586,6 +683,12 @@ export default function DashboardPage() {
                                 </span>
                             </div>
                         ))}
+                        {facturiScadente.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-8 text-slate-300">
+                                <Orbit className="h-10 w-10 mb-2 animate-[orbit-spin_8s_linear_infinite]" />
+                                <p className="font-rajdhani text-sm">Nicio factură scadentă</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
