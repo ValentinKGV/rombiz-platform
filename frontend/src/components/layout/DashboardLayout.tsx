@@ -48,7 +48,7 @@ const navItems = [
     { path: "/dosare", label: "Motor Dosare", icon: Scale },
     { path: "/new-companies", label: "Firme Noi", icon: Building2 },
     { path: "/fraud", label: "Fraud Graph", icon: Shield },
-    { path: "/esg", label: "ESG", icon: Leaf },
+    // { path: "/esg", label: "ESG", icon: Leaf },
     { path: "/reports", label: "Rapoarte", icon: FileText },
     { path: "/ai", label: "AI Agent", icon: Bot },
     { path: "/compare", label: "Comparare Firme", icon: GitCompareArrows },
