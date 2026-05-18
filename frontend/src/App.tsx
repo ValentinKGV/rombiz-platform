@@ -121,37 +121,24 @@ export default function App() {
                 closeButton
             />
             <Routes>
-                {/* Public — no auth required */}
+                {/* Auth pages — no layout */}
                 <Route path="/login" element={<Suspense fallback={<RouteFallback />}><LoginPage /></Suspense>} />
                 <Route path="/register" element={<Suspense fallback={<RouteFallback />}><RegisterPage /></Suspense>} />
                 <Route path="/forgot-password" element={<Suspense fallback={<RouteFallback />}><ForgotPasswordPage /></Suspense>} />
                 <Route path="/reset-password" element={<Suspense fallback={<RouteFallback />}><ResetPasswordPage /></Suspense>} />
 
-                {/* Public pages with layout — no auth required */}
-                <Route element={<DashboardLayout />}>
+                {/* Public pages — no auth required, with layout */}
+                <Route path="/" element={<DashboardLayout />}>
+                    <Route index element={<Suspense fallback={<RouteFallback />}><DashboardPage /></Suspense>} />
                     <Route path="search" element={<Suspense fallback={<RouteFallback />}><SearchPage /></Suspense>} />
                     <Route path="company/:cui" element={<Suspense fallback={<RouteFallback />}><CompanyProfilePage /></Suspense>} />
-                </Route>
-
-                {/* Protected */}
-                <Route
-                    path="/"
-                    element={
-                        <ProtectedRoute>
-                            <DashboardLayout />
-                        </ProtectedRoute>
-                    }
-                >
-                    <Route index element={<Suspense fallback={<RouteFallback />}><DashboardPage /></Suspense>} />
                     <Route path="portfolios" element={<Suspense fallback={<RouteFallback />}><PortfoliosPage /></Suspense>} />
                     <Route path="alerts" element={<Suspense fallback={<RouteFallback />}><AlertsPage /></Suspense>} />
                     <Route path="seap" element={<Suspense fallback={<RouteFallback />}><SEAPPage /></Suspense>} />
                     <Route path="new-companies" element={<Suspense fallback={<RouteFallback />}><NewCompaniesPage /></Suspense>} />
                     <Route path="fraud" element={<Suspense fallback={<RouteFallback />}><FraudGraphPage /></Suspense>} />
                     <Route path="esg" element={<Suspense fallback={<RouteFallback />}><ESGDashboardPage /></Suspense>} />
-
                     <Route path="reports" element={<Suspense fallback={<RouteFallback />}><ReportsPage /></Suspense>} />
-                    <Route path="admin" element={<Suspense fallback={<RouteFallback />}><AdminPage /></Suspense>} />
                     <Route path="ai" element={<Suspense fallback={<RouteFallback />}><AIAgentPage /></Suspense>} />
                     <Route path="predictive" element={<Suspense fallback={<RouteFallback />}><PredictivePage /></Suspense>} />
                     <Route path="relationships" element={<Suspense fallback={<RouteFallback />}><RelationshipsPage /></Suspense>} />
@@ -166,16 +153,28 @@ export default function App() {
                     <Route path="international" element={<Suspense fallback={<RouteFallback />}><InternationalExpansionPage /></Suspense>} />
                     <Route path="audit-log" element={<Suspense fallback={<RouteFallback />}><AuditLogPage /></Suspense>} />
                     <Route path="blockchain" element={<Suspense fallback={<RouteFallback />}><BlockchainAuditPage /></Suspense>} />
-                    <Route path="crm" element={<Suspense fallback={<RouteFallback />}><CRMDataPage /></Suspense>} />
-                    <Route path="co2" element={<Suspense fallback={<RouteFallback />}><CO2DataPage /></Suspense>} />
-                    <Route path="my-esg" element={<Suspense fallback={<RouteFallback />}><MyESGDataPage /></Suspense>} />
-                    <Route path="facturi-furnizori" element={<Suspense fallback={<RouteFallback />}><FacturiFurnizoriPage /></Suspense>} />
                     <Route path="compare" element={<Suspense fallback={<RouteFallback />}><CompanyComparisonPage /></Suspense>} />
                     <Route path="harta" element={<Suspense fallback={<RouteFallback />}><HartaRomaniaPage /></Suspense>} />
                     <Route path="bvb" element={<Suspense fallback={<RouteFallback />}><BVBPage /></Suspense>} />
                     <Route path="my-company" element={<Suspense fallback={<RouteFallback />}><MyCompanyPage /></Suspense>} />
                     <Route path="dosare" element={<Suspense fallback={<RouteFallback />}><CourtCasesPage /></Suspense>} />
                     <Route path="dosare/detalii" element={<Suspense fallback={<RouteFallback />}><DosarDetaliilePage /></Suspense>} />
+                </Route>
+
+                {/* Protected — ATH apps + admin/profile (require login) */}
+                <Route
+                    path="/"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardLayout />
+                        </ProtectedRoute>
+                    }
+                >
+                    <Route path="facturi-furnizori" element={<Suspense fallback={<RouteFallback />}><FacturiFurnizoriPage /></Suspense>} />
+                    <Route path="crm" element={<Suspense fallback={<RouteFallback />}><CRMDataPage /></Suspense>} />
+                    <Route path="co2" element={<Suspense fallback={<RouteFallback />}><CO2DataPage /></Suspense>} />
+                    <Route path="my-esg" element={<Suspense fallback={<RouteFallback />}><MyESGDataPage /></Suspense>} />
+                    <Route path="admin" element={<Suspense fallback={<RouteFallback />}><AdminPage /></Suspense>} />
                     <Route path="change-password" element={<Suspense fallback={<RouteFallback />}><ChangePasswordPage /></Suspense>} />
                     <Route path="profile" element={<Suspense fallback={<RouteFallback />}><ProfilePage /></Suspense>} />
                 </Route>

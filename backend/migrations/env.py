@@ -15,6 +15,7 @@ from app.core.database import Base
 
 # Import all models so Alembic can detect them
 import app.models.models  # noqa: F401
+import app.models.ohlc    # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
