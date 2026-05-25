@@ -278,7 +278,6 @@ async def generate_sdk_docs(db: AsyncSession, language: str = "python") -> dict:
         {"method": "GET", "path": "/api/v1/search", "description": "Căutare firme multi-criteriu", "scopes": ["read"]},
         {"method": "GET", "path": "/api/v1/risk/score/{id}", "description": "Scor de risc companie", "scopes": ["read"]},
         {"method": "GET", "path": "/api/v1/esg/score/{id}", "description": "Scor ESG companie", "scopes": ["read"]},
-        {"method": "GET", "path": "/api/v1/fraud/graph/{id}", "description": "Graf de fraud connections", "scopes": ["read"]},
         {"method": "GET", "path": "/api/v1/predictive/forecast/{id}", "description": "Predicții financiare", "scopes": ["read", "analytics"]},
         {"method": "GET", "path": "/api/v1/due-diligence/report/{id}", "description": "Raport due diligence complet", "scopes": ["read", "reports"]},
         {"method": "POST", "path": "/api/v1/documents/classify", "description": "Clasificare document", "scopes": ["read", "documents"]},
@@ -387,7 +386,7 @@ async def manage_webhooks(
 
     available_events = [
         "company.updated", "company.created", "risk.changed", "esg.updated",
-        "alert.created", "report.ready", "fraud.detected", "compliance.changed",
+        "alert.created", "report.ready", "compliance.changed",
     ]
 
     return {

@@ -61,7 +61,7 @@ interface WatchedCompany {
 }
 
 
-interface FraudWidget {
+interface RiskWidget {
     companies_with_debts: number;
     companies_with_insolvency: number;
     companies_with_litigation: number;
@@ -103,7 +103,6 @@ const MONTHLY_REVENUE = [
 const QUICK_MODULES = [
     { path: "/search", label: "Căutare Firme", icon: Search, color: "from-blue-500 to-indigo-600", desc: "Caută după CUI, denumire" },
     { path: "/alerts", label: "Alerte", icon: Bell, color: "from-red-500 to-rose-600", desc: "43 necitite" },
-    { path: "/fraud", label: "Fraud Graph", icon: Shield, color: "from-orange-500 to-amber-600", desc: "Rețele suspecte" },
     { path: "/portfolios", label: "Portofolii", icon: Briefcase, color: "from-violet-500 to-purple-600", desc: "Monitorizare firme" },
     { path: "/facturi-furnizori", label: "Facturi Furnizori", icon: ReceiptText, color: "from-emerald-500 to-teal-600", desc: "42 facturi active" },
     { path: "/ai", label: "AI Agent", icon: Bot, color: "from-cyan-500 to-blue-600", desc: "Asistent inteligent" },
@@ -141,8 +140,8 @@ export default function DashboardPage() {
     });
 
     // Global widgets
-    const { data: fraudWidget } = useQuery<FraudWidget>({
-        queryKey: ["dashboard-fraud"],
+    const { data: riskWidget } = useQuery<RiskWidget>({
+        queryKey: ["dashboard-risk"],
         queryFn: async () => (await api.get("/dashboard/widgets/fraud")).data,
     });
 
@@ -341,7 +340,7 @@ export default function DashboardPage() {
                     )}
                 </div>
 
-                {/* Fraud/Risk Summary */}
+                {/* Risk Summary */}
                 <div className="card-cosmic">
                     <div className="flex items-center gap-2 mb-3">
                         <Shield className="h-4 w-4 text-red-500" />
@@ -349,19 +348,19 @@ export default function DashboardPage() {
                             Riscuri Active
                         </h3>
                     </div>
-                    {fraudWidget ? (
+                    {riskWidget ? (
                         <div className="space-y-1.5 text-sm">
                             <div className="flex justify-between">
                                 <span className="text-slate-500 dark:text-slate-400">Datorii</span>
-                                <span className="font-semibold text-amber-500">{fraudWidget.companies_with_debts}</span>
+                                <span className="font-semibold text-amber-500">{riskWidget.companies_with_debts}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500 dark:text-slate-400">Insolvențe</span>
-                                <span className="font-semibold text-red-500">{fraudWidget.companies_with_insolvency}</span>
+                                <span className="font-semibold text-red-500">{riskWidget.companies_with_insolvency}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500 dark:text-slate-400">Litigii</span>
-                                <span className="font-semibold text-orange-500">{fraudWidget.companies_with_litigation}</span>
+                                <span className="font-semibold text-orange-500">{riskWidget.companies_with_litigation}</span>
                             </div>
                         </div>
                     ) : (

@@ -11,10 +11,8 @@ from app.api.v1.endpoints import (
     watch,
     risk,
     esg,
-    fraud,
     alerts,
     portfolios,
-    redbill,
     seap,
     reports,
     admin,
@@ -46,10 +44,8 @@ api_v1_router.include_router(companies.router, prefix="/companies", tags=["Compa
 api_v1_router.include_router(search.router, prefix="/search", tags=["Search & Discovery"])
 api_v1_router.include_router(risk.router, prefix="/risk", tags=["Risk & Credit"])
 api_v1_router.include_router(esg.router, prefix="/esg", tags=["ESG Scoring"])
-api_v1_router.include_router(fraud.router, prefix="/fraud", tags=["Fraud Graph"])
 api_v1_router.include_router(alerts.router, prefix="/alerts", tags=["Alerts & Monitoring"])
 api_v1_router.include_router(portfolios.router, prefix="/portfolios", tags=["Portfolios"])
-api_v1_router.include_router(redbill.router, prefix="/redbill", tags=["RedBill"])
 api_v1_router.include_router(seap.router, prefix="/seap", tags=["SEAP Tenders"])
 api_v1_router.include_router(reports.router, prefix="/reports", tags=["Reports & Export"])
 api_v1_router.include_router(admin.router, prefix="/admin", tags=["Admin Dashboard"])

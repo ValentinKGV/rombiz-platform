@@ -243,43 +243,6 @@ class ESGScoreSchema(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# FRAUD GRAPH
-# ═══════════════════════════════════════════════════════════════════════
-
-class FraudAlertSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    alert_type: str
-    severity: Optional[str] = None
-    company_ids: Optional[list[int]] = None
-    descriere: Optional[str] = None
-    confidence: Optional[Decimal] = None
-    status: str = "OPEN"
-    detectat_la: Optional[datetime] = None
-    # Disclaimer obligatoriu (hard constraint #11)
-    disclaimer: str = (
-        "ATENȚIE: Aceasta este o suspiciune algoritmică generată automat. "
-        "Necesită verificare umană înainte de a trage concluzii. "
-        "Nu constituie dovadă sau acuzație de fraudă."
-    )
-
-
-class FraudProfileSchema(BaseModel):
-    company_cui: Optional[int] = None
-    company_name: Optional[str] = None
-    disclaimer: Optional[str] = None
-    anomaly_score: Optional[float] = None
-    alerts: list[FraudAlertSchema] = []
-    graph_metrics: Optional[dict] = None
-    graph_summary: Optional[dict] = None
-    community_id: Optional[int] = None
-    connected_risks: list[dict] = []
-    network_data: Optional[dict] = None
-    related_entities: list[dict] = []
-
-
-# ═══════════════════════════════════════════════════════════════════════
 # SEARCH
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -413,40 +376,6 @@ class AlertSchema(BaseModel):
     data_eveniment: Optional[datetime] = None
     citita: bool = False
     company_id: Optional[int] = None
-    created_at: Optional[datetime] = None
-
-
-# ═══════════════════════════════════════════════════════════════════════
-# REDBILL
-# ═══════════════════════════════════════════════════════════════════════
-
-class RedBillReportRequest(BaseModel):
-    debtor_cui: int
-    invoice_number: str
-    invoice_amount: Decimal = Field(gt=0)
-    invoice_date: date
-    due_date: date
-    visibility: Literal["PUBLIC", "PRIVATE"] = "PUBLIC"
-    format: Optional[str] = "pdf"
-    include_sections: Optional[list[str]] = None
-
-    @field_validator("debtor_cui")
-    @classmethod
-    def validate_debtor_cui(cls, v: int) -> int:
-        # Reuse CUI validation
-        return CompanyBase.validate_cui(v)
-
-
-class RedBillCaseSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    debtor_cui: int
-    invoice_number: str
-    invoice_amount: Decimal
-    due_date: date
-    status: str
-    days_overdue: int = 0
     created_at: Optional[datetime] = None
 
 

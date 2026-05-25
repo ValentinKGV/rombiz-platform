@@ -722,26 +722,7 @@ class EnvironmentalFine(Base):
 
 
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-# REDBILL (Invoice Collection)
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-class RedBillCase(Base):
-    __tablename__ = "redbill_cases"
-
-    id: Mapped[int] = mapped_column(CompatBigInt(), primary_key=True, autoincrement=True)
-    creditor_cui: Mapped[int] = mapped_column(Integer, nullable=False)
-    debtor_cui: Mapped[int] = mapped_column(Integer, nullable=False)
-    invoice_number: Mapped[str] = mapped_column(String(100), nullable=False)
-    invoice_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    invoice_date: Mapped[date] = mapped_column(Date, nullable=False)
-    due_date: Mapped[date] = mapped_column(Date, nullable=False)
-    visibility: Mapped[str] = mapped_column(String(10), default="PUBLIC")
-    status: Mapped[str] = mapped_column(String(20), default="OPEN")
-    collection_started: Mapped[bool] = mapped_column(Boolean, default=False)
-    org_id: Mapped[uuid.UUID] = mapped_column(UUID(), ForeignKey("organizations.id"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
 
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # NEW COMPANIES FEED

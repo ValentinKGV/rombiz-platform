@@ -18,7 +18,6 @@ const DEMO_EXPORTS: ReportExport[] = [
     { id: "1", export_type: "Due Diligence", format: "PDF", status: "completed", created_at: "2026-03-27T10:15:00Z", file_url: "#" },
     { id: "2", export_type: "Raport Financiar", format: "Excel", status: "completed", created_at: "2026-03-26T14:30:00Z", file_url: "#" },
     { id: "3", export_type: "Analiză ESG", format: "PDF", status: "processing", created_at: "2026-03-27T11:45:00Z", file_url: null },
-    { id: "4", export_type: "Fraud Analysis", format: "PDF", status: "completed", created_at: "2026-03-25T09:20:00Z", file_url: "#" },
     { id: "5", export_type: "Portofoliu Export", format: "Excel", status: "completed", created_at: "2026-03-24T16:00:00Z", file_url: "#" },
     { id: "6", export_type: "Monitorizare SEAP", format: "PDF", status: "failed", created_at: "2026-03-23T08:10:00Z", file_url: null },
     { id: "7", export_type: "Raport Companie", format: "PDF", status: "completed", created_at: "2026-03-22T12:30:00Z", file_url: "#" },
@@ -35,8 +34,7 @@ const DEMO_BY_TYPE = [
     { name: "Due Diligence", value: 28, color: "#6366f1" },
     { name: "Raport Financiar", value: 22, color: "#10b981" },
     { name: "Analiză ESG", value: 15, color: "#f59e0b" },
-    { name: "Fraud Analysis", value: 12, color: "#ef4444" },
-    { name: "Altele", value: 23, color: "#8b5cf6" },
+    { name: "Altele", value: 35, color: "#8b5cf6" },
 ];
 
 const DEMO_BY_FORMAT = [

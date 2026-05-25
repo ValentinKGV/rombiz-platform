@@ -109,28 +109,6 @@ export interface ESGScore {
     calculat_la: string;
 }
 
-// ── Fraud ──
-export interface FraudAlert {
-    id: number;
-    alert_type: string;
-    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-    descriere: string;
-    dovezi: Record<string, unknown>;
-    confidence: string;
-    created_at: string;
-}
-
-export interface FraudProfile {
-    company: CompanyBrief;
-    alerts: FraudAlert[];
-    graph_summary: {
-        nodes: number;
-        edges: number;
-        clusters: number;
-    };
-    anomaly_score: string;
-}
-
 // ── Alerts ──
 export type AlertType =
     | "fiscal_status_change"
@@ -238,18 +216,6 @@ export interface PublicContract {
     moneda: string;
     data_contract: string;
     cpv_code: string;
-}
-
-// ── RedBill ──
-export interface DebtProfile {
-    company: CompanyBrief;
-    total_outstanding_ron: string;
-    risk_level: "green" | "yellow" | "orange" | "red";
-    fiscal_debts_count: number;
-    other_debts_count: number;
-    fresh_data_count: number;
-    stale_data_count: number;
-    has_debts: boolean;
 }
 
 // ── New Companies Feed ──

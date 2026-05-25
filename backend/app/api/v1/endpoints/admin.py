@@ -486,7 +486,6 @@ DEFAULT_FLAGS = {
     "esg_scoring_enabled": True,
     "fraud_detection_enabled": True,
     "ai_agent_enabled": True,
-    "redbill_enabled": False,
     "seap_sync_enabled": True,
     "email_notifications_enabled": True,
     "sms_notifications_enabled": False,

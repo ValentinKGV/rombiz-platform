@@ -18,7 +18,6 @@ const PortfoliosPage = lazy(() => import("@/pages/PortfoliosPage"));
 const AlertsPage = lazy(() => import("@/pages/AlertsPage"));
 const SEAPPage = lazy(() => import("@/pages/SEAPPage"));
 const NewCompaniesPage = lazy(() => import("@/pages/NewCompaniesPage"));
-const FraudGraphPage = lazy(() => import("@/pages/FraudGraphPage"));
 const ESGDashboardPage = lazy(() => import("@/pages/ESGDashboardPage"));
 
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
@@ -138,7 +137,6 @@ export default function App() {
                     <Route path="alerts" element={<Suspense fallback={<RouteFallback />}><AlertsPage /></Suspense>} />
                     <Route path="seap" element={<Suspense fallback={<RouteFallback />}><SEAPPage /></Suspense>} />
                     <Route path="new-companies" element={<Suspense fallback={<RouteFallback />}><NewCompaniesPage /></Suspense>} />
-                    <Route path="fraud" element={<Suspense fallback={<RouteFallback />}><FraudGraphPage /></Suspense>} />
                     <Route path="esg" element={<Suspense fallback={<RouteFallback />}><ESGDashboardPage /></Suspense>} />
 
                     <Route path="reports" element={<Suspense fallback={<RouteFallback />}><ReportsPage /></Suspense>} />

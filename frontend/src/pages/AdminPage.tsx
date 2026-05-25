@@ -502,7 +502,6 @@ function FlagsTab() {
         esg_scoring_enabled: "Scoring ESG",
         fraud_detection_enabled: "Detecție Fraudă",
         ai_agent_enabled: "AI Agent",
-        redbill_enabled: "RedBill",
         seap_sync_enabled: "Sincronizare SEAP",
         email_notifications_enabled: "Notificări Email",
         sms_notifications_enabled: "Notificări SMS",

@@ -10,7 +10,7 @@ import {
     riskCategoryLabel,
     cn,
 } from "@/lib/utils";
-import type { CompanyFull, FinancialData, RiskScore, ESGScore, FraudAlert } from "@/types";
+import type { CompanyFull, FinancialData, RiskScore, ESGScore } from "@/types";
 import {
     Building2,
     Shield,
@@ -18,7 +18,6 @@ import {
     Users,
     Gavel,
     FileText,
-    AlertTriangle,
     Globe,
     BarChart3,
     Download,
@@ -82,9 +81,7 @@ export default function CompanyProfilePage() {
         { id: "persons", label: "Persoane", icon: Users },
         { id: "legal", label: "Juridic", icon: Gavel },
         { id: "contracts", label: "Contracte", icon: FileText },
-        { id: "debts", label: "Datorii", icon: AlertTriangle },
         { id: "eu-projects", label: "Proiecte EU", icon: Globe },
-        { id: "fraud", label: "Fraud", icon: Shield },
         { id: "extra", label: "BVB / OSIM / ASF", icon: Award },
     ], []);
 
@@ -237,9 +234,7 @@ export default function CompanyProfilePage() {
             {activeTab === "persons" && <PersonsTab cui={cui!} />}
             {activeTab === "legal" && <LegalTab cui={cui!} />}
             {activeTab === "contracts" && <ContractsTab cui={cui!} />}
-            {activeTab === "debts" && <DebtsTab cui={cui!} />}
             {activeTab === "eu-projects" && <EUProjectsTab cui={cui!} />}
-            {activeTab === "fraud" && <FraudTab cui={cui!} />}
             {activeTab === "extra" && <ExtraDataTab cui={cui!} />}
 
             {/* AI Report Modal */}
@@ -1227,41 +1222,6 @@ function ContractsTab({ cui }: { cui: string }) {
     );
 }
 
-function DebtsTab({ cui }: { cui: string }) {
-    const { data, isLoading } = useQuery({
-        queryKey: ["redbill", cui],
-        queryFn: async () => {
-            const { data } = await api.get(`/redbill/${cui}`);
-            return data;
-        },
-    });
-
-    if (isLoading) return <LoadingSpinner />;
-    if (!data) return <p className="font-rajdhani text-slate-400">Nu sunt date disponibile.</p>;
-
-    return (
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div className="card-cosmic text-center relative overflow-hidden">
-                    <div className="absolute inset-x-0 top-0 h-1 bg-dragon-gradient" />
-                    <p className="font-rajdhani text-sm font-semibold uppercase tracking-wider text-slate-400">Total Datorii</p>
-                    <p className="font-orbitron text-2xl font-bold text-slate-800">{formatMoney(data.total_datorii || "0")}</p>
-                </div>
-                <div className="card-cosmic text-center relative overflow-hidden">
-                    <div className="absolute inset-x-0 top-0 h-1 bg-nebula-gradient" />
-                    <p className="font-rajdhani text-sm font-semibold uppercase tracking-wider text-slate-400">Clasificare</p>
-                    <p className="font-orbitron text-2xl font-bold capitalize text-slate-800">{data.risk_classification}</p>
-                </div>
-                <div className="card-cosmic text-center relative overflow-hidden">
-                    <div className="absolute inset-x-0 top-0 h-1 bg-cosmos-gradient" />
-                    <p className="font-rajdhani text-sm font-semibold uppercase tracking-wider text-slate-400">Grad de Prospețime</p>
-                    <p className="font-orbitron text-2xl font-bold text-slate-800">{data.freshness_days} zile</p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 function EUProjectsTab({ cui }: { cui: string }) {
     const { data: projects, isLoading } = useQuery({
         queryKey: ["company", cui, "eu-projects"],
@@ -1442,72 +1402,6 @@ function ExtraDataTab({ cui }: { cui: string }) {
                     <p className="font-rajdhani text-sm text-slate-400">Compania nu este supravegheată de ASF.</p>
                 )}
             </div>
-        </div>
-    );
-}
-
-
-function FraudTab({ cui }: { cui: string }) {
-    const { data, isLoading } = useQuery({
-        queryKey: ["fraud", cui],
-        queryFn: async () => {
-            const { data } = await api.get(`/fraud/${cui}/profile`);
-            return data;
-        },
-    });
-
-    if (isLoading) return <LoadingSpinner />;
-    if (!data) return <p className="font-rajdhani text-slate-400">Nu există date fraud.</p>;
-
-    return (
-        <div className="space-y-4">
-            {/* Disclaimer — Hard constraint #11 */}
-            <div className="card-cosmic border-l-4 border-dragon-fire py-3 px-4 text-sm text-dragon-600">
-                <strong className="font-orbitron text-xs">Aviz Important:</strong>{" "}
-                <span className="font-rajdhani">Datele prezentate reprezintă suspiciuni algoritmice
-                    și nu constituie probe sau acuzații. Orice decizie bazată pe aceste informații
-                    trebuie verificată independent.</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div className="card-cosmic text-center relative overflow-hidden">
-                    <div className="absolute inset-x-0 top-0 h-1 bg-dragon-gradient" />
-                    <p className="font-rajdhani text-sm font-semibold uppercase tracking-wider text-slate-400">Scor Anomalie</p>
-                    <p className="font-orbitron text-2xl font-bold text-slate-800">{data.anomaly_score}</p>
-                </div>
-                <div className="card-cosmic text-center relative overflow-hidden">
-                    <div className="absolute inset-x-0 top-0 h-1 bg-nebula-gradient" />
-                    <p className="font-rajdhani text-sm font-semibold uppercase tracking-wider text-slate-400">Noduri Graf</p>
-                    <p className="font-orbitron text-2xl font-bold text-slate-800">{data.graph_summary?.nodes || 0}</p>
-                </div>
-                <div className="card-cosmic text-center relative overflow-hidden">
-                    <div className="absolute inset-x-0 top-0 h-1 bg-cosmos-gradient" />
-                    <p className="font-rajdhani text-sm font-semibold uppercase tracking-wider text-slate-400">Alerte Active</p>
-                    <p className="font-orbitron text-2xl font-bold text-slate-800">{data.alerts?.length || 0}</p>
-                </div>
-            </div>
-
-            {data.alerts?.map((alert: FraudAlert) => (
-                <div key={alert.id} className="card-cosmic py-4 px-5 transition-all hover:shadow-nebula/20">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="font-exo font-semibold text-slate-700">{alert.alert_type}</p>
-                            <p className="font-rajdhani text-sm text-slate-400">{alert.descriere}</p>
-                        </div>
-                        <span
-                            className={cn(
-                                "rounded-full px-2 py-0.5 text-xs font-medium",
-                                alert.severity === "CRITICAL" && "bg-red-100 text-red-700",
-                                alert.severity === "HIGH" && "bg-orange-100 text-orange-700",
-                                alert.severity === "MEDIUM" && "bg-yellow-100 text-yellow-700",
-                                alert.severity === "LOW" && "bg-green-100 text-green-700"
-                            )}
-                        >
-                            {alert.severity}
-                        </span>
-                    </div>
-                </div>
-            ))}
         </div>
     );
 }

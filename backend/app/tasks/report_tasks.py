@@ -137,29 +137,3 @@ def generate_portfolio_report_task(
                 raise
 
     return asyncio.run(_run())
-
-
-@celery_app.task(name="app.tasks.report_tasks.generate_redbill_report_task")
-def generate_redbill_report_task(
-    company_id: int,
-    format: str = "pdf",
-    include_sections: list[str] = None,
-):
-    """Generate a RedBill report."""
-
-    async def _run():
-        from app.services.reports_service import ReportService
-
-        async with get_db_context() as db:
-            service = ReportService(db)
-            content = await service.generate_company_pdf(
-                company_id,
-                include_sections or ["general", "financial", "risk"],
-            )
-
-            return {
-                "status": "completed",
-                "size_bytes": len(content),
-            }
-
-    return asyncio.run(_run())

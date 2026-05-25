@@ -15,7 +15,6 @@ celery_app = Celery(
         "app.tasks.sync_tasks",
         "app.tasks.risk_tasks",
         "app.tasks.esg_tasks",
-        "app.tasks.fraud_tasks",
         "app.tasks.report_tasks",
         "app.tasks.notification_tasks",
         "app.tasks.maintenance_tasks",
@@ -55,7 +54,6 @@ celery_app.conf.update(
         "app.tasks.sync_tasks.*": {"queue": "sync"},
         "app.tasks.risk_tasks.*": {"queue": "compute"},
         "app.tasks.esg_tasks.*": {"queue": "compute"},
-        "app.tasks.fraud_tasks.*": {"queue": "compute"},
         "app.tasks.report_tasks.*": {"queue": "reports"},
         "app.tasks.notification_tasks.*": {"queue": "notifications"},
         "app.tasks.ai_anomaly_tasks.*": {"queue": "compute"},
@@ -120,13 +118,6 @@ celery_app.conf.beat_schedule = {
     "recalc-esg-scores": {
         "task": "app.tasks.esg_tasks.batch_recalculate_esg_scores",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
-        "options": {"queue": "compute"},
-    },
-
-    # Fraud detection — daily at 04:00 UTC
-    "run-fraud-detection": {
-        "task": "app.tasks.fraud_tasks.run_all_detection",
-        "schedule": crontab(hour=4, minute=0),
         "options": {"queue": "compute"},
     },
 
